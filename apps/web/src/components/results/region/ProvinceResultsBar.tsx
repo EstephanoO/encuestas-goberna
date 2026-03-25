@@ -35,13 +35,14 @@ export function ProvinceResultsBar({
     provinceCountByName.set(r.label, (provinceCountByName.get(r.label) ?? 0) + 1);
   }
 
-  // Build segments from department rankings (skip Viciado/Blanco/Nulo and Otros)
+  // Build segments ONLY from candidates who won at least one province
   const segments: BarSegment[] = departmentRankings
     .filter(
       (r) =>
         r.party !== '' &&
         !r.name.toLowerCase().includes('viciado') &&
-        !r.name.toLowerCase().includes('otros'),
+        !r.name.toLowerCase().includes('otros') &&
+        (provinceCountByName.get(r.name) ?? 0) > 0,
     )
     .map((r) => ({
       name: r.name,

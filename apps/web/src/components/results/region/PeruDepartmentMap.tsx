@@ -57,7 +57,7 @@ export function PeruDepartmentMap({
   return (
     <div className="flex flex-col items-center">
       {/* SVG Map */}
-      <div className="relative w-full max-w-[420px] flex-shrink-0">
+      <div className="relative w-full max-w-[600px] flex-shrink-0">
         <svg
           viewBox={`0 0 ${PROVINCE_SVG_SIZE} ${PROVINCE_SVG_SIZE}`}
           className="h-auto w-full"
