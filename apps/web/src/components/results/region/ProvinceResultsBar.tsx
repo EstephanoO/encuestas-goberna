@@ -2,84 +2,26 @@ import type { ProvinceResult, CandidateRanking } from '@/data/surveyResults';
 
 interface ProvinceResultsBarProps {
   provinceResults: ProvinceResult[];
-  /** Department-level rankings with percentage for each candidate */
+  /** Department-level rankings (used only for leader/runner header info) */
   departmentRankings: CandidateRanking[];
   topicLabel: string;
   departmentLabel: string;
 }
 
-interface BarSegment {
+interface CandidateSummary {
   name: string;
   color: string;
   party: string;
-  percentage: number;
   provinceCount: number;
+  /** Sum of all province percentages for this candidate */
+  totalPercentage: number;
 }
 
 /**
- * Build segments from department rankings (for candidates topics).
- * Only includes candidates who won at least one province.
- */
-function buildFromRankings(
-  rankings: CandidateRanking[],
-  provinceCounts: Map<string, number>,
-): BarSegment[] {
-  return rankings
-    .filter(
-      (r) =>
-        r.party !== '' &&
-        !r.name.toLowerCase().includes('viciado') &&
-        !r.name.toLowerCase().includes('otros') &&
-        (provinceCounts.get(r.name) ?? 0) > 0,
-    )
-    .map((r) => ({
-      name: r.name,
-      color: r.color,
-      party: r.party,
-      percentage: r.percentage,
-      provinceCount: provinceCounts.get(r.name) ?? 0,
-    }));
-}
-
-/**
- * Build segments from province results directly (for problemas / redes topics).
- * Groups by label, averages percentage, counts provinces.
- */
-function buildFromProvinces(results: ProvinceResult[]): BarSegment[] {
-  const map = new Map<
-    string,
-    { color: string; party: string; totalPct: number; count: number }
-  >();
-
-  for (const r of results) {
-    const existing = map.get(r.label);
-    if (existing) {
-      existing.totalPct += r.percentage;
-      existing.count += 1;
-    } else {
-      map.set(r.label, {
-        color: r.partyColor,
-        party: r.partyName,
-        totalPct: r.percentage,
-        count: 1,
-      });
-    }
-  }
-
-  return [...map.entries()]
-    .map(([name, v]) => ({
-      name,
-      color: v.color,
-      party: v.party,
-      percentage: Math.round(v.totalPct / v.count),
-      provinceCount: v.count,
-    }))
-    .sort((a, b) => b.provinceCount - a.provinceCount);
-}
-
-/**
- * AP News–style horizontal bar. Uses department rankings when available,
- * otherwise builds from province results (for problemas / redes topics).
+ * AP News–style horizontal bar.
+ * Each province is an individual block whose width is proportional
+ * to the percentage the winning candidate got IN THAT province.
+ * Blocks are grouped by candidate: leader on the left, runner on the right.
  */
 export function ProvinceResultsBar({
   provinceResults,
@@ -89,31 +31,68 @@ export function ProvinceResultsBar({
 }: ProvinceResultsBarProps) {
   if (provinceResults.length === 0) return null;
 
-  // Count provinces per candidate
-  const provinceCountByName = new Map<string, number>();
+  // Group provinces by candidate and sum their percentages
+  const candidateMap = new Map<string, CandidateSummary>();
   for (const r of provinceResults) {
-    provinceCountByName.set(r.label, (provinceCountByName.get(r.label) ?? 0) + 1);
+    const existing = candidateMap.get(r.label);
+    if (existing) {
+      existing.provinceCount += 1;
+      existing.totalPercentage += r.percentage;
+    } else {
+      candidateMap.set(r.label, {
+        name: r.label,
+        color: r.partyColor,
+        party: r.partyName,
+        provinceCount: 1,
+        totalPercentage: r.percentage,
+      });
+    }
   }
 
-  // Use rankings if available, otherwise build from province results
-  const segments: BarSegment[] =
-    departmentRankings.length > 0
-      ? buildFromRankings(departmentRankings, provinceCountByName)
-      : buildFromProvinces(provinceResults);
+  // Sort candidates by total percentage descending
+  const candidates = [...candidateMap.values()].sort(
+    (a, b) => b.totalPercentage - a.totalPercentage,
+  );
 
-  if (segments.length === 0) return null;
+  if (candidates.length === 0) return null;
 
-  const totalPercentage = segments.reduce((sum, s) => sum + s.percentage, 0);
-  const leader = segments[0];
-  const runner = segments.length > 1 ? segments[1] : null;
+  const leader = candidates[0];
+  const runner = candidates.length > 1 ? candidates[1] : null;
 
-  // Reorder for the bar: leader (left) → middle → runner (right)
-  const middle = segments.slice(2);
-  const barOrder: BarSegment[] = [
-    leader,
-    ...middle,
-    ...(runner ? [runner] : []),
-  ];
+  // Total percentage across all provinces (sum of all individual percentages)
+  const grandTotal = provinceResults.reduce((sum, r) => sum + r.percentage, 0);
+
+  // Build individual province blocks grouped by candidate
+  // Order: leader provinces → middle candidates → runner provinces
+  const middle = candidates.slice(2);
+  const orderedCandidates = [leader, ...middle, ...(runner ? [runner] : [])];
+
+  // Build block list: each province is one block
+  const blocks: { province: string; label: string; color: string; percentage: number }[] = [];
+  for (const cand of orderedCandidates) {
+    // Get this candidate's provinces sorted by percentage descending
+    const provs = provinceResults
+      .filter((r) => r.label === cand.name)
+      .sort((a, b) => b.percentage - a.percentage);
+    for (const p of provs) {
+      blocks.push({
+        province: p.province,
+        label: p.label,
+        color: p.partyColor,
+        percentage: p.percentage,
+      });
+    }
+  }
+
+  // Use department ranking percentage for header if available, otherwise average
+  function getHeaderPercentage(candidateName: string, summary: CandidateSummary): number {
+    const ranking = departmentRankings.find((r) => r.name === candidateName);
+    if (ranking) return ranking.percentage;
+    return Math.round(summary.totalPercentage / summary.provinceCount);
+  }
+
+  const leaderPct = getHeaderPercentage(leader.name, leader);
+  const runnerPct = runner ? getHeaderPercentage(runner.name, runner) : 0;
 
   return (
     <div className="space-y-5">
@@ -130,7 +109,7 @@ export function ProvinceResultsBar({
             className="text-4xl font-black tabular-nums leading-none sm:text-5xl"
             style={{ color: leader.color }}
           >
-            {leader.percentage}%
+            {leaderPct}%
           </p>
           <p className="mt-1 text-sm font-bold text-slate-900">
             {leader.name}
@@ -154,7 +133,7 @@ export function ProvinceResultsBar({
               className="text-4xl font-black tabular-nums leading-none sm:text-5xl"
               style={{ color: runner.color }}
             >
-              {runner.percentage}%
+              {runnerPct}%
             </p>
             <p className="mt-1 text-sm font-bold text-slate-900">
               {runner.name}
@@ -166,52 +145,39 @@ export function ProvinceResultsBar({
         )}
       </div>
 
-      {/* Segmented bar — leader left, runner right, rest in center */}
+      {/* Segmented bar — each block is one province, width = its percentage */}
       <div className="flex h-8 w-full gap-[2px] overflow-hidden sm:h-10">
-        {barOrder.map((seg) => {
-          const widthPercent = (seg.percentage / totalPercentage) * 100;
-          const provCount = seg.provinceCount;
-
+        {blocks.map((block) => {
+          const widthPercent = (block.percentage / grandTotal) * 100;
           return (
             <div
-              key={seg.name}
-              className="flex gap-[2px]"
-              style={{ width: `${widthPercent}%` }}
-            >
-              {provCount > 0 ? (
-                Array.from({ length: provCount }).map((_, i) => (
-                  <div
-                    key={`${seg.name}-${String(i)}`}
-                    className="flex-1 rounded-[3px] transition-all duration-300"
-                    style={{ backgroundColor: seg.color }}
-                    title={`${seg.name} — ${seg.percentage}%`}
-                  />
-                ))
-              ) : (
-                <div
-                  className="flex-1 rounded-[3px] transition-all duration-300"
-                  style={{ backgroundColor: seg.color }}
-                  title={`${seg.name} — ${seg.percentage}%`}
-                />
-              )}
-            </div>
+              key={block.province}
+              className="rounded-[3px] transition-all duration-300"
+              style={{
+                width: `${widthPercent}%`,
+                backgroundColor: block.color,
+              }}
+              title={`${block.province.charAt(0) + block.province.slice(1).toLowerCase()} — ${block.label} ${block.percentage}%`}
+            />
           );
         })}
       </div>
 
       {/* Bottom labels */}
       <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-1.5">
-        {segments.map((seg) => (
-          <div key={seg.name} className="flex items-center gap-1.5">
+        {candidates.map((cand) => (
+          <div key={cand.name} className="flex items-center gap-1.5">
             <span
               className="inline-block h-2.5 w-2.5 rounded-sm"
-              style={{ backgroundColor: seg.color }}
+              style={{ backgroundColor: cand.color }}
             />
             <span className="text-xs text-slate-600">
-              {seg.name}{' '}
-              <span className="font-bold">{seg.percentage}%</span>
+              {cand.name}{' '}
+              <span className="font-bold">
+                {getHeaderPercentage(cand.name, cand)}%
+              </span>
               <span className="text-slate-400">
-                {' '}({seg.provinceCount} prov.)
+                {' '}({cand.provinceCount} prov.)
               </span>
             </span>
           </div>
