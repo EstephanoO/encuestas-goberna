@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Download } from 'lucide-react';
+import { Download, Eye } from 'lucide-react';
 import { getDownloadCount, incrementDownloadCount } from '@/services/api/downloads';
 
 interface DownloadButtonProps {
@@ -18,28 +18,31 @@ export function DownloadButton({ departmentId, departmentLabel }: DownloadButton
     incrementDownloadCount(departmentId)
       .then(setCount)
       .catch(() => {
-        // Still increment locally even if API fails
         setCount((prev) => (prev ?? 0) + 1);
       });
   }
 
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex items-center gap-4">
+      {/* Download count — left side */}
+      {count !== null && (
+        <span className="flex items-center gap-1.5 text-xs text-slate-400">
+          <Eye className="h-3.5 w-3.5" />
+          <span className="font-semibold text-slate-500">{count.toLocaleString()}</span>
+          {count === 1 ? 'descarga' : 'descargas'}
+        </span>
+      )}
+
+      {/* Download link — discrete style */}
       <a
         href={`/fichas/${departmentId}.pdf`}
         download={`ficha-tecnica-${departmentLabel}.pdf`}
         onClick={handleClick}
-        className="inline-flex items-center gap-2.5 rounded-full bg-goberna-gold px-6 py-3 text-sm font-bold uppercase tracking-wide text-goberna-blue shadow-lg transition-all hover:bg-goberna-blue hover:text-white hover:shadow-xl"
+        className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 underline decoration-slate-300 underline-offset-2 transition-colors hover:text-goberna-blue hover:decoration-goberna-blue"
       >
-        <Download className="h-4 w-4" />
-        Descarga la ficha técnica
+        <Download className="h-3.5 w-3.5" />
+        Ficha técnica
       </a>
-      {count !== null && (
-        <span className="text-xs text-slate-500">
-          <span className="font-bold text-slate-700">{count.toLocaleString()}</span>{' '}
-          {count === 1 ? 'descarga' : 'descargas'}
-        </span>
-      )}
     </div>
   );
 }
