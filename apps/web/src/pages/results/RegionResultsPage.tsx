@@ -4,7 +4,7 @@ import { ArrowLeft, Download, MapPin } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { RegionHero } from '@/components/results/region/RegionHero';
-import { RegionMapSection } from '@/components/results/region/RegionMapSection';
+import { PeruDepartmentMap } from '@/components/results/region/PeruDepartmentMap';
 import { ProblemasBarChart } from '@/components/results/region/ProblemasBarChart';
 import { PresidentialRankingChart } from '@/components/results/region/PresidentialRankingChart';
 import { RegionResultsSection } from '@/components/results/region/RegionResultsSection';
@@ -124,10 +124,10 @@ export default function RegionResultsPage() {
           </div>
 
           <div className="mt-6">
-            <RegionMapSection
-              departmentId={departmentId}
-              provinceResults={provinceResults}
-              showPhoto={selectedTopic?.showPhoto ?? false}
+            <PeruDepartmentMap
+              activeDepartmentId={departmentId}
+              departmentRankings={DEPARTMENT_RANKINGS[selectedTopicId] ?? {}}
+              topicLabel={selectedTopic?.label ?? 'Presidencial'}
             />
           </div>
 
