@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { RegionHero } from '@/components/results/region/RegionHero';
 import { PeruDepartmentMap } from '@/components/results/region/PeruDepartmentMap';
+import { ProvinceResultsBar } from '@/components/results/region/ProvinceResultsBar';
 import { ProblemasBarChart } from '@/components/results/region/ProblemasBarChart';
 import { PresidentialRankingChart } from '@/components/results/region/PresidentialRankingChart';
 import { RegionResultsSection } from '@/components/results/region/RegionResultsSection';
@@ -122,6 +123,13 @@ export default function RegionResultsPage() {
             </button>
           ))}
         </div>
+
+        {/* AP News–style results bar */}
+        <ProvinceResultsBar
+          provinceResults={provinceResults}
+          topicLabel={selectedTopic?.label ?? 'Presidencial'}
+          departmentLabel={departmentLabel}
+        />
 
         {/* Province map */}
         <PeruDepartmentMap
