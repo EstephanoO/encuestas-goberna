@@ -1,0 +1,41 @@
+tema,departamento,provincia,ganador,partido,porcentaje,origen
+presidentes,San Martín,San Martín (Tarapoto),Rafael López Aliaga,Renovación Popular,21,Dato Exacto
+presidentes,San Martín,Moyobamba,Rafael López Aliaga,Renovación Popular,20,Dato Exacto
+presidentes,San Martín,Rioja,Keiko Fujimori,Fuerza Popular,17,Dato Exacto
+presidentes,San Martín,Lamas,Keiko Fujimori,Fuerza Popular,17,Dato Exacto
+presidentes,San Martín,Huallaga,Keiko Fujimori,Fuerza Popular,18,Dato Exacto
+presidentes,San Martín,Picota,Keiko Fujimori,Fuerza Popular,18,Dato Exacto
+presidentes,San Martín,El Dorado,Keiko Fujimori,Fuerza Popular,19,Dato Exacto
+presidentes,San Martín,Bellavista,César Acuña,Alianza Para el Progreso,21,Dato Exacto
+presidentes,San Martín,Mariscal Cáceres,César Acuña,Alianza Para el Progreso,22,Dato Exacto
+presidentes,San Martín,Tocache,César Acuña,Alianza Para el Progreso,23,Dato Exacto
+diputados,San Martín,San Martín (Tarapoto),Erik Cabrejos / Cheryl Trigozo,,19,Dato Exacto
+diputados,San Martín,Moyobamba,Cristian Puelles,,20,Dato Exacto
+diputados,San Martín,Rioja,Cristian Puelles,,19,Dato Exacto
+diputados,San Martín,Lamas,Erik Cabrejos,,20,Simulado
+diputados,San Martín,Picota,Erik Cabrejos,,19,Simulado
+diputados,San Martín,Bellavista,Erik Cabrejos,,18,Simulado
+diputados,San Martín,Tocache,Cristian Puelles,,19,Simulado
+diputados,San Martín,Huallaga,Cristian Puelles,,17,Simulado
+diputados,San Martín,El Dorado,Cheryl Trigozo,,18,Simulado
+diputados,San Martín,Mariscal Cáceres,Arturo Alegría,,17,Simulado
+senadores,San Martín,San Martín (Tarapoto),Víctor Noriega,,22,Dato Exacto
+senadores,San Martín,Moyobamba,Luis Córdova,,19,Dato Exacto
+senadores,San Martín,Rioja,Luis Córdova,,20,Dato Exacto
+senadores,San Martín,Lamas,Víctor Noriega,,18,Simulado
+senadores,San Martín,Picota,Víctor Noriega,,17,Simulado
+senadores,San Martín,Mariscal Cáceres,Víctor Noriega,,17,Simulado
+senadores,San Martín,El Dorado,Rubén Trigoso,,18,Simulado
+senadores,San Martín,Huallaga,Rubén Trigoso,,17,Simulado
+senadores,San Martín,Tocache,Rubén Trigoso,,16,Simulado
+senadores,San Martín,Bellavista,Luis Córdova,,16,Simulado
+problemas,San Martín,San Martín (Tarapoto),Inseguridad ciudadana / Delincuencia,,30,Dato Exacto
+problemas,San Martín,Moyobamba,Corrupción en el Gob. Regional/Local,,28,Dato Exacto
+problemas,San Martín,Rioja,Corrupción en el Gob. Regional/Local,,25,Dato Exacto
+problemas,San Martín,Lamas,Corrupción en el Gob. Regional/Local,,24,Simulado
+problemas,San Martín,Mariscal Cáceres,Corrupción en el Gob. Regional/Local,,23,Simulado
+problemas,San Martín,El Dorado,Mal estado de carreteras / Infraestructura,,35,Simulado
+problemas,San Martín,Huallaga,Mal estado de carreteras / Infraestructura,,34,Simulado
+problemas,San Martín,Picota,Mal estado de carreteras / Infraestructura,,31,Simulado
+problemas,San Martín,Bellavista,Mal estado de carreteras / Infraestructura,,30,Simulado
+problemas,San Martín,Tocache,Mal estado de carreteras / Infraestructura,,36,Simulado

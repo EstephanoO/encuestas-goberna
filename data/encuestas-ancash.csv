@@ -1,0 +1,81 @@
+tema,departamento,provincia,ganador,partido,porcentaje,origen
+presidentes,Áncash,Santa (Chimbote),Rafael López Aliaga,Renovación Popular,21,Dato Exacto
+presidentes,Áncash,Casma,Rafael López Aliaga,Renovación Popular,19,Dato Exacto
+presidentes,Áncash,Huarmey,Keiko Fujimori,Fuerza Popular,16,Dato Exacto
+presidentes,Áncash,Huaraz,Keiko Fujimori,Fuerza Popular,19,Simulado
+presidentes,Áncash,Huari,César Acuña,Alianza Para el Progreso,19,Simulado
+presidentes,Áncash,Yungay,Keiko Fujimori,Fuerza Popular,19,Simulado
+presidentes,Áncash,Carhuaz,César Acuña,Alianza Para el Progreso,19,Simulado
+presidentes,Áncash,Bolognesi,Keiko Fujimori,Fuerza Popular,19,Simulado
+presidentes,Áncash,Pallasca,César Acuña,Alianza Para el Progreso,19,Simulado
+presidentes,Áncash,Corongo,Keiko Fujimori,Fuerza Popular,19,Simulado
+presidentes,Áncash,Huaylas,Rafael López Aliaga,Renovación Popular,14,Simulado
+presidentes,Áncash,Pomabamba,César Acuña,Alianza Para el Progreso,19,Simulado
+presidentes,Áncash,Sihuas,Keiko Fujimori,Fuerza Popular,19,Simulado
+presidentes,Áncash,Antonio Raymondi,César Acuña,Alianza Para el Progreso,19,Simulado
+presidentes,Áncash,Carlos Fermín Fitzcarrald,Rafael López Aliaga,Renovación Popular,14,Simulado
+presidentes,Áncash,Mariscal Luzuriaga,Keiko Fujimori,Fuerza Popular,19,Simulado
+presidentes,Áncash,Aija,César Acuña,Alianza Para el Progreso,19,Simulado
+presidentes,Áncash,Recuay,Keiko Fujimori,Fuerza Popular,19,Simulado
+presidentes,Áncash,Ocros,César Acuña,Alianza Para el Progreso,19,Simulado
+presidentes,Áncash,Asunción,Rafael López Aliaga,Renovación Popular,14,Simulado
+diputados,Áncash,Santa (Chimbote),Jesús Veliz,Fuerza Popular,16,Dato Exacto
+diputados,Áncash,Casma,Zulema Barrenechea,Renovación Popular,21,Dato Exacto
+diputados,Áncash,Huarmey,Mary Melgarejo,Alianza Para el Progreso,22,Dato Exacto
+diputados,Áncash,Huaraz,Zulema Barrenechea,Renovación Popular,9,Simulado
+diputados,Áncash,Huari,Mary Melgarejo,Alianza Para el Progreso,8,Simulado
+diputados,Áncash,Yungay,Zulema Barrenechea,Renovación Popular,9,Simulado
+diputados,Áncash,Carhuaz,Mary Melgarejo,Alianza Para el Progreso,8,Simulado
+diputados,Áncash,Bolognesi,Zulema Barrenechea,Renovación Popular,9,Simulado
+diputados,Áncash,Pallasca,María Gamarra,Avanza País,8,Simulado
+diputados,Áncash,Corongo,Zulema Barrenechea,Renovación Popular,9,Simulado
+diputados,Áncash,Huaylas,Mary Melgarejo,Alianza Para el Progreso,8,Simulado
+diputados,Áncash,Pomabamba,María Gamarra,Avanza País,8,Simulado
+diputados,Áncash,Sihuas,Zulema Barrenechea,Renovación Popular,9,Simulado
+diputados,Áncash,Antonio Raymondi,Pamela Toro,País para Todos,7,Simulado
+diputados,Áncash,Carlos Fermín Fitzcarrald,Mary Melgarejo,Alianza Para el Progreso,8,Simulado
+diputados,Áncash,Mariscal Luzuriaga,María Gamarra,Avanza País,8,Simulado
+diputados,Áncash,Aija,Zulema Barrenechea,Renovación Popular,9,Simulado
+diputados,Áncash,Recuay,Pamela Toro,País para Todos,7,Simulado
+diputados,Áncash,Ocros,Mary Melgarejo,Alianza Para el Progreso,8,Simulado
+diputados,Áncash,Asunción,Jesús Veliz,Fuerza Popular,7,Simulado
+senadores,Áncash,Santa (Chimbote),Oto Gibovich,Renovación Popular,21,Dato Exacto
+senadores,Áncash,Casma,Lenin Tafur,Fuerza Popular,20,Dato Exacto
+senadores,Áncash,Huarmey,Lenin Tafur,Fuerza Popular,19,Dato Exacto
+senadores,Áncash,Huaraz,Oto Gibovich,Renovación Popular,16,Simulado
+senadores,Áncash,Huari,Oto Gibovich,Renovación Popular,16,Simulado
+senadores,Áncash,Yungay,Oto Gibovich,Renovación Popular,16,Simulado
+senadores,Áncash,Carhuaz,Astencio Guevara,País para Todos,14,Simulado
+senadores,Áncash,Bolognesi,Oto Gibovich,Renovación Popular,16,Simulado
+senadores,Áncash,Pallasca,Jhonny Soto,Avanza País,13,Simulado
+senadores,Áncash,Corongo,Oto Gibovich,Renovación Popular,16,Simulado
+senadores,Áncash,Huaylas,Lenin Tafur,Fuerza Popular,14,Simulado
+senadores,Áncash,Pomabamba,Oto Gibovich,Renovación Popular,16,Simulado
+senadores,Áncash,Sihuas,Astencio Guevara,País para Todos,14,Simulado
+senadores,Áncash,Antonio Raymondi,César A. Sánchez,Alianza Para el Progreso,12,Simulado
+senadores,Áncash,Carlos Fermín Fitzcarrald,Oto Gibovich,Renovación Popular,16,Simulado
+senadores,Áncash,Mariscal Luzuriaga,Jhonny Soto,Avanza País,13,Simulado
+senadores,Áncash,Aija,Oto Gibovich,Renovación Popular,16,Simulado
+senadores,Áncash,Recuay,Astencio Guevara,País para Todos,14,Simulado
+senadores,Áncash,Ocros,César A. Sánchez,Alianza Para el Progreso,12,Simulado
+senadores,Áncash,Asunción,Lenin Tafur,Fuerza Popular,14,Simulado
+problemas,Áncash,Santa (Chimbote),Inseguridad ciudadana / Delincuencia,,35,Dato Exacto
+problemas,Áncash,Casma,Inseguridad ciudadana / Delincuencia,,30,Dato Exacto
+problemas,Áncash,Huarmey,Inseguridad ciudadana / Delincuencia,,28,Dato Exacto
+problemas,Áncash,Huaraz,Corrupción en el Gob. Regional/Local,,27,Simulado
+problemas,Áncash,Huari,Mal estado de carreteras / Infraestructura,,34,Simulado
+problemas,Áncash,Yungay,Corrupción en el Gob. Regional/Local,,25,Simulado
+problemas,Áncash,Carhuaz,Corrupción en el Gob. Regional/Local,,24,Simulado
+problemas,Áncash,Bolognesi,Mal estado de carreteras / Infraestructura,,36,Simulado
+problemas,Áncash,Pallasca,Mal estado de carreteras / Infraestructura,,38,Simulado
+problemas,Áncash,Corongo,Mal estado de carreteras / Infraestructura,,37,Simulado
+problemas,Áncash,Huaylas,Corrupción en el Gob. Regional/Local,,26,Simulado
+problemas,Áncash,Pomabamba,Mal estado de carreteras / Infraestructura,,35,Simulado
+problemas,Áncash,Sihuas,Mal estado de carreteras / Infraestructura,,36,Simulado
+problemas,Áncash,Antonio Raymondi,Mal estado de carreteras / Infraestructura,,38,Simulado
+problemas,Áncash,Carlos Fermín Fitzcarrald,Mal estado de carreteras / Infraestructura,,35,Simulado
+problemas,Áncash,Mariscal Luzuriaga,Mal estado de carreteras / Infraestructura,,37,Simulado
+problemas,Áncash,Aija,Mal estado de carreteras / Infraestructura,,33,Simulado
+problemas,Áncash,Recuay,Corrupción en el Gob. Regional/Local,,26,Simulado
+problemas,Áncash,Ocros,Mal estado de carreteras / Infraestructura,,36,Simulado
+problemas,Áncash,Asunción,Mal estado de carreteras / Infraestructura,,34,Simulado
