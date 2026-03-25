@@ -59,9 +59,6 @@ export function ProvinceResultsBar({
   const leader = candidates[0];
   const runner = candidates.length > 1 ? candidates[1] : null;
 
-  // Total percentage across all provinces (sum of all individual percentages)
-  const grandTotal = provinceResults.reduce((sum, r) => sum + r.percentage, 0);
-
   // Build individual province blocks grouped by candidate
   // Order: leader provinces → middle candidates → runner provinces
   const middle = candidates.slice(2);
@@ -145,22 +142,19 @@ export function ProvinceResultsBar({
         )}
       </div>
 
-      {/* Segmented bar — each block is one province, width = its percentage */}
+      {/* Segmented bar — each block width IS the percentage value directly */}
       <div className="flex h-8 w-full gap-[2px] overflow-hidden sm:h-10">
-        {blocks.map((block) => {
-          const widthPercent = (block.percentage / grandTotal) * 100;
-          return (
-            <div
-              key={block.province}
-              className="rounded-[3px] transition-all duration-300"
-              style={{
-                width: `${widthPercent}%`,
-                backgroundColor: block.color,
-              }}
-              title={`${block.province.charAt(0) + block.province.slice(1).toLowerCase()} — ${block.label} ${block.percentage}%`}
-            />
-          );
-        })}
+        {blocks.map((block) => (
+          <div
+            key={block.province}
+            className="rounded-[3px] transition-all duration-300"
+            style={{
+              width: `${block.percentage}%`,
+              backgroundColor: block.color,
+            }}
+            title={`${block.province.charAt(0) + block.province.slice(1).toLowerCase()} — ${block.label} ${block.percentage}%`}
+          />
+        ))}
       </div>
 
       {/* Bottom labels */}
