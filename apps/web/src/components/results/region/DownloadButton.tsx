@@ -24,7 +24,16 @@ export function DownloadButton({ departmentId, departmentLabel }: DownloadButton
 
   return (
     <div className="flex items-center gap-3">
-      {/* Download button — original gold style, just shorter text */}
+      {/* Download count — left side on desktop, hidden on mobile */}
+      {count !== null && (
+        <span className="hidden items-center gap-1.5 text-xs text-slate-400 sm:flex">
+          <Eye className="h-3.5 w-3.5" />
+          <span className="font-semibold text-slate-500">{count.toLocaleString()}</span>
+          {count === 1 ? 'descarga' : 'descargas'}
+        </span>
+      )}
+
+      {/* Download button */}
       <a
         href={`/fichas/${departmentId}.pdf`}
         download={`ficha-tecnica-${departmentLabel}.pdf`}
@@ -35,9 +44,9 @@ export function DownloadButton({ departmentId, departmentLabel }: DownloadButton
         Ficha técnica
       </a>
 
-      {/* Download count — right side */}
+      {/* Download count — right side on mobile only */}
       {count !== null && (
-        <span className="flex items-center gap-1.5 text-xs text-slate-400">
+        <span className="flex items-center gap-1.5 text-xs text-slate-400 sm:hidden">
           <Eye className="h-3.5 w-3.5" />
           <span className="font-semibold text-slate-500">{count.toLocaleString()}</span>
           {count === 1 ? 'descarga' : 'descargas'}
