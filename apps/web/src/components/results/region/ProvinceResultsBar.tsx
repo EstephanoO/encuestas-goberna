@@ -18,10 +18,9 @@ interface CandidateSummary {
 }
 
 /**
- * AP News–style horizontal bar.
- * Each province is an individual block whose width is proportional
- * to the percentage the winning candidate got IN THAT province.
- * Blocks are grouped by candidate: leader on the left, runner on the right.
+ * AP News–style results bar.
+ * Desktop: horizontal segmented bar with province blocks.
+ * Mobile: vertical list of horizontal bars per province.
  */
 export function ProvinceResultsBar({
   provinceResults,
@@ -60,14 +59,11 @@ export function ProvinceResultsBar({
   const runner = candidates.length > 1 ? candidates[1] : null;
 
   // Build individual province blocks grouped by candidate
-  // Order: leader provinces → middle candidates → runner provinces
   const middle = candidates.slice(2);
   const orderedCandidates = [leader, ...middle, ...(runner ? [runner] : [])];
 
-  // Build block list: each province is one block
   const blocks: { province: string; label: string; color: string; percentage: number }[] = [];
   for (const cand of orderedCandidates) {
-    // Get this candidate's provinces sorted by percentage descending
     const provs = provinceResults
       .filter((r) => r.label === cand.name)
       .sort((a, b) => b.percentage - a.percentage);
@@ -91,59 +87,59 @@ export function ProvinceResultsBar({
   const leaderPct = getHeaderPercentage(leader.name, leader);
   const runnerPct = runner ? getHeaderPercentage(runner.name, runner) : 0;
 
+  // Max percentage for scaling the mobile vertical bars
+  const maxPct = Math.max(...blocks.map((b) => b.percentage));
+
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 px-1">
       {/* Title */}
-      <h2 className="text-center text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
+      <h2 className="text-center text-xl font-extrabold tracking-tight text-slate-900 sm:text-2xl md:text-3xl">
         Encuesta {topicLabel} — {departmentLabel}
       </h2>
 
       {/* Leader vs Runner header */}
       <div className="flex items-end justify-between gap-4">
-        {/* Left — leader */}
         <div>
           <p
-            className="text-4xl font-black tabular-nums leading-none sm:text-5xl"
+            className="text-3xl font-black tabular-nums leading-none sm:text-4xl md:text-5xl"
             style={{ color: leader.color }}
           >
             {leaderPct}%
           </p>
-          <p className="mt-1 text-sm font-bold text-slate-900">
+          <p className="mt-1 text-xs font-bold text-slate-900 sm:text-sm">
             {leader.name}
           </p>
           {leader.party && (
-            <p className="text-xs text-slate-500">{leader.party}</p>
+            <p className="text-[10px] text-slate-500 sm:text-xs">{leader.party}</p>
           )}
         </div>
 
-        {/* Center — total provinces */}
         <div className="flex flex-col items-center">
-          <p className="text-xs font-semibold text-slate-400">
+          <p className="text-[10px] font-semibold text-slate-400 sm:text-xs">
             {provinceResults.length} provincias
           </p>
         </div>
 
-        {/* Right — runner up */}
         {runner && (
           <div className="text-right">
             <p
-              className="text-4xl font-black tabular-nums leading-none sm:text-5xl"
+              className="text-3xl font-black tabular-nums leading-none sm:text-4xl md:text-5xl"
               style={{ color: runner.color }}
             >
               {runnerPct}%
             </p>
-            <p className="mt-1 text-sm font-bold text-slate-900">
+            <p className="mt-1 text-xs font-bold text-slate-900 sm:text-sm">
               {runner.name}
             </p>
             {runner.party && (
-              <p className="text-xs text-slate-500">{runner.party}</p>
+              <p className="text-[10px] text-slate-500 sm:text-xs">{runner.party}</p>
             )}
           </div>
         )}
       </div>
 
-      {/* Segmented bar — each block width IS the percentage value directly */}
-      <div className="flex h-8 w-full gap-[2px] overflow-hidden sm:h-10">
+      {/* Desktop: horizontal segmented bar */}
+      <div className="hidden gap-[3px] sm:flex sm:h-10">
         {blocks.map((block) => (
           <div
             key={block.province}
@@ -157,15 +153,44 @@ export function ProvinceResultsBar({
         ))}
       </div>
 
+      {/* Mobile: vertical list of horizontal bars */}
+      <div className="flex flex-col gap-1.5 sm:hidden">
+        {blocks.map((block) => {
+          const widthPct = (block.percentage / maxPct) * 100;
+          const provName =
+            block.province.charAt(0) + block.province.slice(1).toLowerCase();
+          return (
+            <div key={block.province} className="flex items-center gap-2">
+              <span className="w-20 flex-shrink-0 truncate text-right text-[10px] font-medium text-slate-500">
+                {provName}
+              </span>
+              <div className="relative flex h-6 flex-1 items-center overflow-hidden rounded-[3px] bg-slate-100">
+                <div
+                  className="flex h-full items-center rounded-[3px] px-2 transition-all duration-300"
+                  style={{
+                    width: `${widthPct}%`,
+                    backgroundColor: block.color,
+                  }}
+                >
+                  <span className="text-[10px] font-bold text-white drop-shadow-sm">
+                    {block.percentage}%
+                  </span>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
       {/* Bottom labels */}
-      <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-1.5">
+      <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 sm:gap-x-5">
         {candidates.map((cand) => (
           <div key={cand.name} className="flex items-center gap-1.5">
             <span
               className="inline-block h-2.5 w-2.5 rounded-sm"
               style={{ backgroundColor: cand.color }}
             />
-            <span className="text-xs text-slate-600">
+            <span className="text-[10px] text-slate-600 sm:text-xs">
               {cand.name}{' '}
               <span className="font-bold">
                 {getHeaderPercentage(cand.name, cand)}%
