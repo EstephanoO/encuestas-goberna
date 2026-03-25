@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Download, MapPin } from 'lucide-react';
+import { ArrowLeft, MapPin } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { RegionHero } from '@/components/results/region/RegionHero';
@@ -9,6 +9,7 @@ import { ProvinceResultsBar } from '@/components/results/region/ProvinceResultsB
 import { ProblemasBarChart } from '@/components/results/region/ProblemasBarChart';
 import { PresidentialRankingChart } from '@/components/results/region/PresidentialRankingChart';
 import { RegionResultsSection } from '@/components/results/region/RegionResultsSection';
+import { DownloadButton } from '@/components/results/region/DownloadButton';
 import {
   SURVEY_TOPICS,
   PROVINCE_RESULTS,
@@ -93,14 +94,7 @@ export default function RegionResultsPage() {
           <span className="text-sm text-slate-500">
             Departamento: <span className="font-semibold text-slate-900">{departmentLabel}</span>
           </span>
-          <a
-            href={`/fichas/${departmentId}.pdf`}
-            download={`ficha-tecnica-${departmentLabel}.pdf`}
-            className="inline-flex items-center gap-2.5 rounded-full bg-goberna-gold px-6 py-3 text-sm font-bold uppercase tracking-wide text-goberna-blue shadow-lg transition-all hover:bg-goberna-blue hover:text-white hover:shadow-xl"
-          >
-            <Download className="h-4 w-4" />
-            Descarga la ficha tecnica
-          </a>
+          <DownloadButton departmentId={departmentId} departmentLabel={departmentLabel} />
         </div>
 
         {/* Topic tabs */}
