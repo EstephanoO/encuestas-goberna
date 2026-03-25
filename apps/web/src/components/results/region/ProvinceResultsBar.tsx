@@ -18,9 +18,9 @@ interface CandidateSummary {
 }
 
 /**
- * AP News–style results bar.
- * Desktop: horizontal segmented bar with province blocks.
- * Mobile: vertical list of horizontal bars per province.
+ * AP News–style horizontal segmented bar.
+ * Each province is an individual block whose width is proportional
+ * to the percentage the winning candidate got IN THAT province.
  */
 export function ProvinceResultsBar({
   provinceResults,
@@ -87,18 +87,15 @@ export function ProvinceResultsBar({
   const leaderPct = getHeaderPercentage(leader.name, leader);
   const runnerPct = runner ? getHeaderPercentage(runner.name, runner) : 0;
 
-  // Max percentage for scaling the mobile vertical bars
-  const maxPct = Math.max(...blocks.map((b) => b.percentage));
-
   return (
-    <div className="space-y-5 px-1">
+    <div className="mx-2 space-y-4 sm:mx-0 sm:space-y-5">
       {/* Title */}
       <h2 className="text-center text-xl font-extrabold tracking-tight text-slate-900 sm:text-2xl md:text-3xl">
         Encuesta {topicLabel} — {departmentLabel}
       </h2>
 
       {/* Leader vs Runner header */}
-      <div className="flex items-end justify-between gap-4">
+      <div className="flex items-end justify-between gap-3 sm:gap-4">
         <div>
           <p
             className="text-3xl font-black tabular-nums leading-none sm:text-4xl md:text-5xl"
@@ -138,8 +135,8 @@ export function ProvinceResultsBar({
         )}
       </div>
 
-      {/* Desktop: horizontal segmented bar */}
-      <div className="hidden gap-[3px] sm:flex sm:h-10">
+      {/* Horizontal segmented bar */}
+      <div className="flex h-7 w-full gap-[2px] sm:h-10 sm:gap-[3px]">
         {blocks.map((block) => (
           <div
             key={block.province}
@@ -151,35 +148,6 @@ export function ProvinceResultsBar({
             title={`${block.province.charAt(0) + block.province.slice(1).toLowerCase()} — ${block.label} ${block.percentage}%`}
           />
         ))}
-      </div>
-
-      {/* Mobile: vertical list of horizontal bars */}
-      <div className="flex flex-col gap-1.5 sm:hidden">
-        {blocks.map((block) => {
-          const widthPct = (block.percentage / maxPct) * 100;
-          const provName =
-            block.province.charAt(0) + block.province.slice(1).toLowerCase();
-          return (
-            <div key={block.province} className="flex items-center gap-2">
-              <span className="w-20 flex-shrink-0 truncate text-right text-[10px] font-medium text-slate-500">
-                {provName}
-              </span>
-              <div className="relative flex h-6 flex-1 items-center overflow-hidden rounded-[3px] bg-slate-100">
-                <div
-                  className="flex h-full items-center rounded-[3px] px-2 transition-all duration-300"
-                  style={{
-                    width: `${widthPct}%`,
-                    backgroundColor: block.color,
-                  }}
-                >
-                  <span className="text-[10px] font-bold text-white drop-shadow-sm">
-                    {block.percentage}%
-                  </span>
-                </div>
-              </div>
-            </div>
-          );
-        })}
       </div>
 
       {/* Bottom labels */}

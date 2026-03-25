@@ -170,7 +170,7 @@ export function PresidentialRankingChart({ candidates }: PresidentialRankingChar
   const chartHeight = Math.max(280, data.length * 52);
 
   return (
-    <section className="space-y-3 rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-6">
+    <section className="mx-2 space-y-3 rounded-2xl border border-border bg-card p-3 shadow-sm sm:mx-0 sm:p-6">
       <div>
         <h3 className="text-sm font-semibold text-foreground">
           Ranking Presidencial
@@ -184,7 +184,7 @@ export function PresidentialRankingChart({ candidates }: PresidentialRankingChar
         <BarChart
           data={data}
           layout="vertical"
-          margin={{ top: 5, right: 40, bottom: 5, left: 130 }}
+          margin={{ top: 5, right: 30, bottom: 5, left: 100 }}
         >
           <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e2e8f0" />
           <XAxis
