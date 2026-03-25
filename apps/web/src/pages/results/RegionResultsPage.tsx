@@ -127,6 +127,7 @@ export default function RegionResultsPage() {
         {/* AP News–style results bar */}
         <ProvinceResultsBar
           provinceResults={provinceResults}
+          departmentRankings={selectedTopic?.rankings ?? []}
           topicLabel={selectedTopic?.label ?? 'Presidencial'}
           departmentLabel={departmentLabel}
         />
