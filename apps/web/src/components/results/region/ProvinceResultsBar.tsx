@@ -17,9 +17,69 @@ interface BarSegment {
 }
 
 /**
- * AP News–style horizontal bar where each candidate segment's width
- * is proportional to their department-level survey percentage.
- * Inside each segment, individual province blocks are shown.
+ * Build segments from department rankings (for candidates topics).
+ * Only includes candidates who won at least one province.
+ */
+function buildFromRankings(
+  rankings: CandidateRanking[],
+  provinceCounts: Map<string, number>,
+): BarSegment[] {
+  return rankings
+    .filter(
+      (r) =>
+        r.party !== '' &&
+        !r.name.toLowerCase().includes('viciado') &&
+        !r.name.toLowerCase().includes('otros') &&
+        (provinceCounts.get(r.name) ?? 0) > 0,
+    )
+    .map((r) => ({
+      name: r.name,
+      color: r.color,
+      party: r.party,
+      percentage: r.percentage,
+      provinceCount: provinceCounts.get(r.name) ?? 0,
+    }));
+}
+
+/**
+ * Build segments from province results directly (for problemas / redes topics).
+ * Groups by label, averages percentage, counts provinces.
+ */
+function buildFromProvinces(results: ProvinceResult[]): BarSegment[] {
+  const map = new Map<
+    string,
+    { color: string; party: string; totalPct: number; count: number }
+  >();
+
+  for (const r of results) {
+    const existing = map.get(r.label);
+    if (existing) {
+      existing.totalPct += r.percentage;
+      existing.count += 1;
+    } else {
+      map.set(r.label, {
+        color: r.partyColor,
+        party: r.partyName,
+        totalPct: r.percentage,
+        count: 1,
+      });
+    }
+  }
+
+  return [...map.entries()]
+    .map(([name, v]) => ({
+      name,
+      color: v.color,
+      party: v.party,
+      percentage: Math.round(v.totalPct / v.count),
+      provinceCount: v.count,
+    }))
+    .sort((a, b) => b.provinceCount - a.provinceCount);
+}
+
+/**
+ * AP News–style horizontal bar. Uses department rankings when available,
+ * otherwise builds from province results (for problemas / redes topics).
  */
 export function ProvinceResultsBar({
   provinceResults,
@@ -27,30 +87,19 @@ export function ProvinceResultsBar({
   topicLabel,
   departmentLabel,
 }: ProvinceResultsBarProps) {
-  if (departmentRankings.length === 0) return null;
+  if (provinceResults.length === 0) return null;
 
-  // Count provinces per candidate from province results
+  // Count provinces per candidate
   const provinceCountByName = new Map<string, number>();
   for (const r of provinceResults) {
     provinceCountByName.set(r.label, (provinceCountByName.get(r.label) ?? 0) + 1);
   }
 
-  // Build segments ONLY from candidates who won at least one province
-  const segments: BarSegment[] = departmentRankings
-    .filter(
-      (r) =>
-        r.party !== '' &&
-        !r.name.toLowerCase().includes('viciado') &&
-        !r.name.toLowerCase().includes('otros') &&
-        (provinceCountByName.get(r.name) ?? 0) > 0,
-    )
-    .map((r) => ({
-      name: r.name,
-      color: r.color,
-      party: r.party,
-      percentage: r.percentage,
-      provinceCount: provinceCountByName.get(r.name) ?? 0,
-    }));
+  // Use rankings if available, otherwise build from province results
+  const segments: BarSegment[] =
+    departmentRankings.length > 0
+      ? buildFromRankings(departmentRankings, provinceCountByName)
+      : buildFromProvinces(provinceResults);
 
   if (segments.length === 0) return null;
 
@@ -58,7 +107,7 @@ export function ProvinceResultsBar({
   const leader = segments[0];
   const runner = segments.length > 1 ? segments[1] : null;
 
-  // Reorder for the bar: leader (left) → middle candidates → runner (right)
+  // Reorder for the bar: leader (left) → middle → runner (right)
   const middle = segments.slice(2);
   const barOrder: BarSegment[] = [
     leader,
@@ -92,13 +141,11 @@ export function ProvinceResultsBar({
         </div>
 
         {/* Center — total provinces */}
-        {provinceResults.length > 0 && (
-          <div className="flex flex-col items-center">
-            <p className="text-xs font-semibold text-slate-400">
-              {provinceResults.length} provincias
-            </p>
-          </div>
-        )}
+        <div className="flex flex-col items-center">
+          <p className="text-xs font-semibold text-slate-400">
+            {provinceResults.length} provincias
+          </p>
+        </div>
 
         {/* Right — runner up */}
         {runner && (
@@ -123,7 +170,6 @@ export function ProvinceResultsBar({
       <div className="flex h-8 w-full gap-[2px] overflow-hidden sm:h-10">
         {barOrder.map((seg) => {
           const widthPercent = (seg.percentage / totalPercentage) * 100;
-          // Split this segment into individual province blocks
           const provCount = seg.provinceCount;
 
           return (
@@ -153,7 +199,7 @@ export function ProvinceResultsBar({
         })}
       </div>
 
-      {/* Bottom labels — all candidates */}
+      {/* Bottom labels */}
       <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-1.5">
         {segments.map((seg) => (
           <div key={seg.name} className="flex items-center gap-1.5">
@@ -164,11 +210,9 @@ export function ProvinceResultsBar({
             <span className="text-xs text-slate-600">
               {seg.name}{' '}
               <span className="font-bold">{seg.percentage}%</span>
-              {seg.provinceCount > 0 && (
-                <span className="text-slate-400">
-                  {' '}({seg.provinceCount} prov.)
-                </span>
-              )}
+              <span className="text-slate-400">
+                {' '}({seg.provinceCount} prov.)
+              </span>
             </span>
           </div>
         ))}

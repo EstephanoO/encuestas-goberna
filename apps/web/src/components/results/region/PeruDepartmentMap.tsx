@@ -64,6 +64,7 @@ export function PeruDepartmentMap({
           role="img"
           aria-label="Mapa de provincias"
         >
+          {/* First pass: all polygon shapes */}
           {provinces.map((prov) => {
             const result = resultByProvince.get(prov.nombprov);
             const fillColor = result?.partyColor ?? '#e2e8f0';
@@ -71,39 +72,46 @@ export function PeruDepartmentMap({
             const isHovered = hoveredProv === prov.nombprov;
 
             return (
-              <g key={prov.nombprov}>
-                <path
-                  d={prov.d}
-                  fill={fillColor}
-                  fillOpacity={hasData ? (isHovered ? 1 : 0.82) : 0.25}
-                  stroke="#ffffff"
-                  strokeWidth={isHovered ? 2.5 : 1.5}
-                  className="cursor-pointer transition-all duration-200"
-                  onMouseEnter={() => setHoveredProv(prov.nombprov)}
-                  onMouseLeave={() => setHoveredProv(null)}
-                />
-                {/* Province name label */}
-                <text
-                  x={prov.cx}
-                  y={prov.cy}
-                  textAnchor="middle"
-                  dominantBaseline="central"
-                  className={cn(
-                    'pointer-events-none select-none font-bold',
-                    hasData ? 'fill-white' : 'fill-slate-400',
-                  )}
-                  fontSize={8}
-                  style={{
-                    textShadow: hasData
-                      ? '0 1px 3px rgba(0,0,0,0.6), 0 0 2px rgba(0,0,0,0.3)'
-                      : 'none',
-                  }}
-                >
-                  {prov.nombprov.length > 12
-                    ? prov.nombprov.slice(0, 10) + '…'
-                    : prov.nombprov}
-                </text>
-              </g>
+              <path
+                key={prov.nombprov}
+                d={prov.d}
+                fill={fillColor}
+                fillOpacity={hasData ? (isHovered ? 1 : 0.82) : 0.25}
+                stroke="#ffffff"
+                strokeWidth={isHovered ? 2.5 : 1.5}
+                className="cursor-pointer transition-all duration-200"
+                onMouseEnter={() => setHoveredProv(prov.nombprov)}
+                onMouseLeave={() => setHoveredProv(null)}
+              />
+            );
+          })}
+          {/* Second pass: all labels on top */}
+          {provinces.map((prov) => {
+            const result = resultByProvince.get(prov.nombprov);
+            const hasData = !!result;
+
+            return (
+              <text
+                key={`label-${prov.nombprov}`}
+                x={prov.cx}
+                y={prov.cy}
+                textAnchor="middle"
+                dominantBaseline="central"
+                className={cn(
+                  'pointer-events-none select-none font-bold',
+                  hasData ? 'fill-white' : 'fill-slate-400',
+                )}
+                fontSize={8}
+                style={{
+                  textShadow: hasData
+                    ? '0 1px 3px rgba(0,0,0,0.6), 0 0 2px rgba(0,0,0,0.3)'
+                    : 'none',
+                }}
+              >
+                {prov.nombprov.length > 12
+                  ? prov.nombprov.slice(0, 10) + '…'
+                  : prov.nombprov}
+              </text>
             );
           })}
         </svg>
