@@ -3,7 +3,6 @@ import { DepartamentoSelector } from './DepartamentoSelector';
 import { MapaEncuesta } from './MapaEncuesta';
 import { ResultadosCargo } from './ResultadosCargo';
 import {
-  SURVEY_TOPICS,
   PROVINCE_RESULTS,
   DEPARTMENT_RANKINGS,
 } from '@/data/surveyResults';
@@ -39,19 +38,14 @@ const DEPARTMENTS = [
 export function EncuestaResultadosSection() {
   const [selectedDepartmentId, setSelectedDepartmentId] = useState<string | null>(null);
   const [hoveredDepartmentId, setHoveredDepartmentId] = useState<string | null>(null);
-  const [selectedTopicId, setSelectedTopicId] = useState(
-    SURVEY_TOPICS[0]?.id ?? 'presidentes',
-  );
 
   function handleDepartmentSelect(id: string, enabled: boolean) {
     if (!enabled) return;
     setSelectedDepartmentId(id);
   }
 
-  const selectedTopic = SURVEY_TOPICS.find((t) => t.id === selectedTopicId);
-
   const provinceResults = selectedDepartmentId
-    ? PROVINCE_RESULTS[selectedTopicId]?.[selectedDepartmentId] ?? []
+    ? PROVINCE_RESULTS.presidentes?.[selectedDepartmentId] ?? []
     : [];
 
   return (
@@ -68,29 +62,6 @@ export function EncuestaResultadosSection() {
             Selecciona un departamento para consultar los resultados de la
             encuesta y descargar la ficha técnica correspondiente.
           </p>
-        </div>
-
-        {/* Topic selector */}
-        <div className="flex flex-wrap items-center gap-3">
-          <span className="text-sm font-semibold text-slate-500">
-            Tema de encuesta:
-          </span>
-          <div className="flex flex-wrap gap-2">
-            {SURVEY_TOPICS.map((topic) => (
-              <button
-                key={topic.id}
-                type="button"
-                onClick={() => setSelectedTopicId(topic.id)}
-                className={`rounded-full border px-4 py-1.5 text-sm font-semibold transition-colors ${
-                  selectedTopicId === topic.id
-                    ? 'border-goberna-blue bg-goberna-blue text-white'
-                    : 'border-slate-200 bg-white text-slate-600 hover:border-goberna-blue/40'
-                }`}
-              >
-                {topic.label}
-              </button>
-            ))}
-          </div>
         </div>
 
         <div className="grid items-start gap-8 xl:grid-cols-[0.9fr_1.1fr]">
@@ -110,7 +81,7 @@ export function EncuestaResultadosSection() {
             activeDepartmentId={selectedDepartmentId}
             hoveredDepartmentId={hoveredDepartmentId}
             provinceResults={provinceResults}
-            showPhoto={selectedTopic?.showPhoto ?? false}
+            showPhoto={true}
           />
         </div>
 
