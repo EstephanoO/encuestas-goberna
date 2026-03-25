@@ -37,14 +37,11 @@ interface PeruDepartmentMapProps {
   activeDepartmentId: string;
   /** Province-level results for the selected topic + department */
   provinceResults: ProvinceResult[];
-  /** Selected survey topic label for the legend title */
-  topicLabel?: string;
 }
 
 export function PeruDepartmentMap({
   activeDepartmentId,
   provinceResults,
-  topicLabel = 'Presidencial',
 }: PeruDepartmentMapProps) {
   const [hoveredProv, setHoveredProv] = useState<string | null>(null);
 
@@ -57,27 +54,15 @@ export function PeruDepartmentMap({
     resultByProvince.set(r.province, r);
   }
 
-  // Build unique legend entries
-  const legendEntries = new Map<string, { label: string; color: string; partyName: string }>();
-  for (const r of provinceResults) {
-    if (!legendEntries.has(r.label)) {
-      legendEntries.set(r.label, {
-        label: r.label,
-        color: r.partyColor,
-        partyName: r.partyName,
-      });
-    }
-  }
-
   return (
-    <div className="flex flex-col items-center gap-8 lg:flex-row lg:items-start lg:gap-12">
+    <div className="flex flex-col items-center">
       {/* SVG Map */}
       <div className="relative w-full max-w-[420px] flex-shrink-0">
         <svg
           viewBox={`0 0 ${PROVINCE_SVG_SIZE} ${PROVINCE_SVG_SIZE}`}
           className="h-auto w-full"
           role="img"
-          aria-label={`Mapa de provincias — ${topicLabel}`}
+          aria-label="Mapa de provincias"
         >
           {provinces.map((prov) => {
             const result = resultByProvince.get(prov.nombprov);
@@ -149,32 +134,7 @@ export function PeruDepartmentMap({
         })()}
       </div>
 
-      {/* Legend */}
-      <div className="w-full lg:w-auto">
-        <h4 className="mb-4 text-xs font-bold uppercase tracking-widest text-slate-500">
-          Lidera / Gana
-        </h4>
-        <div className="flex flex-wrap gap-x-6 gap-y-3 lg:flex-col">
-          {[...legendEntries.values()].map((entry) => (
-            <div key={entry.label} className="flex items-center gap-2.5">
-              <span
-                className="inline-block h-3.5 w-3.5 flex-shrink-0 rounded-sm shadow-sm"
-                style={{ backgroundColor: entry.color }}
-              />
-              <div>
-                <span className="text-sm font-semibold text-slate-800">
-                  {entry.label}
-                </span>
-                {entry.partyName && (
-                  <span className="ml-1.5 text-xs text-slate-400">
-                    {entry.partyName}
-                  </span>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+
     </div>
   );
 }

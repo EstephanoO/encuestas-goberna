@@ -10,13 +10,13 @@ interface CandidateSegment {
   label: string;
   color: string;
   partyName: string;
-  provinceCount: number;
-  photoUrl?: string;
+  provinces: string[];
 }
 
 /**
- * AP News–style horizontal bar showing province distribution per candidate.
- * Each segment represents how many provinces a candidate leads in.
+ * AP News–style horizontal bar where each block is an individual province,
+ * colored by whoever leads there. Provinces are grouped by candidate so
+ * same-color blocks sit together.
  */
 export function ProvinceResultsBar({
   provinceResults,
@@ -27,30 +27,38 @@ export function ProvinceResultsBar({
 
   const totalProvinces = provinceResults.length;
 
-  // Count provinces per candidate (by label — the candidate/issue name)
+  // Group provinces per candidate
   const candidateMap = new Map<string, CandidateSegment>();
   for (const r of provinceResults) {
     const existing = candidateMap.get(r.label);
     if (existing) {
-      existing.provinceCount += 1;
+      existing.provinces.push(r.province);
     } else {
       candidateMap.set(r.label, {
         label: r.label,
         color: r.partyColor,
         partyName: r.partyName,
-        provinceCount: 1,
-        photoUrl: r.photoUrl,
+        provinces: [r.province],
       });
     }
   }
 
-  // Sort by province count descending
+  // Sort candidates by province count descending
   const segments = [...candidateMap.values()].sort(
-    (a, b) => b.provinceCount - a.provinceCount,
+    (a, b) => b.provinces.length - a.provinces.length,
   );
 
   const leader = segments[0];
   const runner = segments.length > 1 ? segments[1] : null;
+
+  // Build ordered list of individual province blocks (grouped by candidate)
+  const blocks = segments.flatMap((seg) =>
+    seg.provinces.map((prov) => ({
+      province: prov,
+      label: seg.label,
+      color: seg.color,
+    })),
+  );
 
   return (
     <div className="space-y-5">
@@ -61,22 +69,20 @@ export function ProvinceResultsBar({
 
       {/* Leader vs Runner header */}
       <div className="flex items-end justify-between gap-4">
-        {/* Left — leader or first */}
-        <div className="flex items-center gap-3">
-          <div>
-            <p
-              className="text-4xl font-black tabular-nums leading-none sm:text-5xl"
-              style={{ color: leader.color }}
-            >
-              {leader.provinceCount}
-            </p>
-            <p className="mt-1 text-sm font-bold text-slate-900">
-              {leader.label}
-            </p>
-            {leader.partyName && (
-              <p className="text-xs text-slate-500">{leader.partyName}</p>
-            )}
-          </div>
+        {/* Left — leader */}
+        <div>
+          <p
+            className="text-4xl font-black tabular-nums leading-none sm:text-5xl"
+            style={{ color: leader.color }}
+          >
+            {leader.provinces.length}
+          </p>
+          <p className="mt-1 text-sm font-bold text-slate-900">
+            {leader.label}
+          </p>
+          {leader.partyName && (
+            <p className="text-xs text-slate-500">{leader.partyName}</p>
+          )}
         </div>
 
         {/* Center — total */}
@@ -88,47 +94,33 @@ export function ProvinceResultsBar({
 
         {/* Right — runner up */}
         {runner && (
-          <div className="flex items-center gap-3 text-right">
-            <div>
-              <p
-                className="text-4xl font-black tabular-nums leading-none sm:text-5xl"
-                style={{ color: runner.color }}
-              >
-                {runner.provinceCount}
-              </p>
-              <p className="mt-1 text-sm font-bold text-slate-900">
-                {runner.label}
-              </p>
-              {runner.partyName && (
-                <p className="text-xs text-slate-500">{runner.partyName}</p>
-              )}
-            </div>
+          <div className="text-right">
+            <p
+              className="text-4xl font-black tabular-nums leading-none sm:text-5xl"
+              style={{ color: runner.color }}
+            >
+              {runner.provinces.length}
+            </p>
+            <p className="mt-1 text-sm font-bold text-slate-900">
+              {runner.label}
+            </p>
+            {runner.partyName && (
+              <p className="text-xs text-slate-500">{runner.partyName}</p>
+            )}
           </div>
         )}
       </div>
 
-      {/* Segmented bar */}
-      <div className="flex h-8 w-full overflow-hidden rounded-md shadow-inner sm:h-10">
-        {segments.map((seg) => {
-          const widthPercent = (seg.provinceCount / totalProvinces) * 100;
-          return (
-            <div
-              key={seg.label}
-              className="relative flex items-center justify-center transition-all duration-300"
-              style={{
-                width: `${widthPercent}%`,
-                backgroundColor: seg.color,
-              }}
-              title={`${seg.label}: ${seg.provinceCount} ${seg.provinceCount === 1 ? 'provincia' : 'provincias'}`}
-            >
-              {widthPercent >= 15 && (
-                <span className="text-xs font-bold text-white drop-shadow-sm">
-                  {seg.provinceCount}
-                </span>
-              )}
-            </div>
-          );
-        })}
+      {/* Segmented bar — one block per province */}
+      <div className="flex h-8 w-full gap-[2px] sm:h-10">
+        {blocks.map((block) => (
+          <div
+            key={block.province}
+            className="relative flex flex-1 items-center justify-center rounded-[3px] transition-all duration-300"
+            style={{ backgroundColor: block.color }}
+            title={`${block.province.charAt(0) + block.province.slice(1).toLowerCase()} — ${block.label}`}
+          />
+        ))}
       </div>
 
       {/* Bottom labels — all candidates */}
@@ -142,7 +134,7 @@ export function ProvinceResultsBar({
             <span className="text-xs text-slate-600">
               {seg.label}{' '}
               <span className="font-bold">
-                ({seg.provinceCount})
+                ({seg.provinces.length})
               </span>
             </span>
           </div>

@@ -135,7 +135,6 @@ export default function RegionResultsPage() {
         <PeruDepartmentMap
           activeDepartmentId={departmentId}
           provinceResults={provinceResults}
-          topicLabel={selectedTopic?.label ?? 'Presidencial'}
         />
 
         {/* Horizontal bar chart — only for "problemas" topic */}
