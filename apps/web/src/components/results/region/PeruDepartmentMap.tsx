@@ -1,13 +1,9 @@
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
-import {
-  DEPARTMENT_PATHS,
-  PERU_SVG_WIDTH,
-  PERU_SVG_HEIGHT,
-} from '@/data/peruDepartmentPaths';
-import type { CandidateRanking } from '@/data/surveyResults';
+import { PROVINCE_PATHS, PROVINCE_SVG_SIZE } from '@/data/provincePaths';
+import type { ProvinceResult } from '@/data/surveyResults';
 
-/** Map from app department slug to NOMBDEP in GeoJSON/SVG paths */
+/** Map from app department slug to NOMBDEP (key in PROVINCE_PATHS) */
 const ID_TO_NOMBDEP: Record<string, string> = {
   amazonas: 'AMAZONAS',
   ancash: 'ANCASH',
@@ -36,148 +32,91 @@ const ID_TO_NOMBDEP: Record<string, string> = {
   ucayali: 'UCAYALI',
 };
 
-const NOMBDEP_TO_ID: Record<string, string> = Object.fromEntries(
-  Object.entries(ID_TO_NOMBDEP).map(([k, v]) => [v, k]),
-);
-
-/** Short labels for department abbreviations on the map */
-const DEPT_ABBREVIATIONS: Record<string, string> = {
-  AMAZONAS: 'AMA',
-  ANCASH: 'ANC',
-  APURIMAC: 'APU',
-  AREQUIPA: 'ARE',
-  AYACUCHO: 'AYA',
-  CAJAMARCA: 'CAJ',
-  CALLAO: 'CAL',
-  CUSCO: 'CUS',
-  HUANCAVELICA: 'HCV',
-  HUANUCO: 'HUA',
-  ICA: 'ICA',
-  JUNIN: 'JUN',
-  'LA LIBERTAD': 'LAL',
-  LAMBAYEQUE: 'LAM',
-  LIMA: 'LIM',
-  LORETO: 'LOR',
-  'MADRE DE DIOS': 'MDD',
-  MOQUEGUA: 'MOQ',
-  PASCO: 'PAS',
-  PIURA: 'PIU',
-  PUNO: 'PUN',
-  'SAN MARTIN': 'SM',
-  TACNA: 'TAC',
-  TUMBES: 'TUM',
-  UCAYALI: 'UCA',
-};
-
 interface PeruDepartmentMapProps {
   /** Currently viewed department ID (slug) */
   activeDepartmentId: string;
-  /** Rankings per department — key is department slug, value is candidate array */
-  departmentRankings: Record<string, CandidateRanking[]>;
+  /** Province-level results for the selected topic + department */
+  provinceResults: ProvinceResult[];
   /** Selected survey topic label for the legend title */
   topicLabel?: string;
 }
 
-/**
- * Gets the fill color for a department based on who is leading.
- * Skips "Viciado / Blanco / Nulo" and "Otros" entries — uses the first
- * real candidate's color.
- */
-function getLeaderColor(rankings: CandidateRanking[] | undefined): string {
-  if (!rankings || rankings.length === 0) return '#e2e8f0'; // slate-200
-  const leader = rankings.find(
-    (r) =>
-      r.party !== '' &&
-      !r.name.toLowerCase().includes('viciado') &&
-      !r.name.toLowerCase().includes('otros'),
-  );
-  return leader?.color ?? rankings[0].color;
-}
-
-function getLeaderInfo(rankings: CandidateRanking[] | undefined) {
-  if (!rankings || rankings.length === 0) return null;
-  const leader = rankings.find(
-    (r) =>
-      r.party !== '' &&
-      !r.name.toLowerCase().includes('viciado') &&
-      !r.name.toLowerCase().includes('otros'),
-  );
-  return leader ?? null;
-}
-
 export function PeruDepartmentMap({
   activeDepartmentId,
-  departmentRankings,
+  provinceResults,
   topicLabel = 'Presidencial',
 }: PeruDepartmentMapProps) {
-  const [hoveredDept, setHoveredDept] = useState<string | null>(null);
-  const activeNombdep = ID_TO_NOMBDEP[activeDepartmentId] ?? '';
+  const [hoveredProv, setHoveredProv] = useState<string | null>(null);
 
-  // Build unique legend entries from departments that have data
-  const legendEntries = new Map<string, { name: string; color: string; party: string }>();
-  for (const rankings of Object.values(departmentRankings)) {
-    const leader = getLeaderInfo(rankings);
-    if (leader && !legendEntries.has(leader.name)) {
-      legendEntries.set(leader.name, {
-        name: leader.name,
-        color: leader.color,
-        party: leader.party,
+  const nombdep = ID_TO_NOMBDEP[activeDepartmentId] ?? '';
+  const provinces = PROVINCE_PATHS[nombdep] ?? [];
+
+  // Build a lookup: province name → result data
+  const resultByProvince = new Map<string, ProvinceResult>();
+  for (const r of provinceResults) {
+    resultByProvince.set(r.province, r);
+  }
+
+  // Build unique legend entries
+  const legendEntries = new Map<string, { label: string; color: string; partyName: string }>();
+  for (const r of provinceResults) {
+    if (!legendEntries.has(r.label)) {
+      legendEntries.set(r.label, {
+        label: r.label,
+        color: r.partyColor,
+        partyName: r.partyName,
       });
     }
   }
 
   return (
-    <div className="flex flex-col items-center gap-6 lg:flex-row lg:items-start lg:gap-10">
+    <div className="flex flex-col items-center gap-8 lg:flex-row lg:items-start lg:gap-12">
       {/* SVG Map */}
-      <div className="relative w-full max-w-[320px] flex-shrink-0 lg:max-w-[280px]">
+      <div className="relative w-full max-w-[420px] flex-shrink-0">
         <svg
-          viewBox={`0 0 ${PERU_SVG_WIDTH} ${PERU_SVG_HEIGHT}`}
+          viewBox={`0 0 ${PROVINCE_SVG_SIZE} ${PROVINCE_SVG_SIZE}`}
           className="h-auto w-full"
           role="img"
-          aria-label={`Mapa de Perú — Resultados ${topicLabel}`}
+          aria-label={`Mapa de provincias — ${topicLabel}`}
         >
-          {/* Background */}
-          <rect width={PERU_SVG_WIDTH} height={PERU_SVG_HEIGHT} fill="#f8fafc" rx="8" />
-
-          {DEPARTMENT_PATHS.map((dept) => {
-            const deptSlug = NOMBDEP_TO_ID[dept.nombdep];
-            const rankings = deptSlug ? departmentRankings[deptSlug] : undefined;
-            const hasData = rankings && rankings.length > 0;
-            const fillColor = hasData ? getLeaderColor(rankings) : '#e2e8f0';
-            const isActive = dept.nombdep === activeNombdep;
-            const isHovered = hoveredDept === dept.nombdep;
-            const abbr = DEPT_ABBREVIATIONS[dept.nombdep] ?? '';
+          {provinces.map((prov) => {
+            const result = resultByProvince.get(prov.nombprov);
+            const fillColor = result?.partyColor ?? '#e2e8f0';
+            const hasData = !!result;
+            const isHovered = hoveredProv === prov.nombprov;
 
             return (
-              <g key={dept.nombdep}>
+              <g key={prov.nombprov}>
                 <path
-                  d={dept.d}
+                  d={prov.d}
                   fill={fillColor}
-                  fillOpacity={hasData ? (isActive ? 1 : isHovered ? 0.9 : 0.7) : 0.3}
-                  stroke={isActive ? '#0f172a' : '#ffffff'}
-                  strokeWidth={isActive ? 2.5 : 1}
+                  fillOpacity={hasData ? (isHovered ? 1 : 0.82) : 0.25}
+                  stroke="#ffffff"
+                  strokeWidth={isHovered ? 2.5 : 1.5}
                   className="cursor-pointer transition-all duration-200"
-                  onMouseEnter={() => setHoveredDept(dept.nombdep)}
-                  onMouseLeave={() => setHoveredDept(null)}
+                  onMouseEnter={() => setHoveredProv(prov.nombprov)}
+                  onMouseLeave={() => setHoveredProv(null)}
                 />
-                {/* Department abbreviation label */}
+                {/* Province name label */}
                 <text
-                  x={dept.cx}
-                  y={dept.cy}
+                  x={prov.cx}
+                  y={prov.cy}
                   textAnchor="middle"
                   dominantBaseline="central"
                   className={cn(
                     'pointer-events-none select-none font-bold',
-                    isActive ? 'fill-white' : hasData ? 'fill-white/90' : 'fill-slate-400',
+                    hasData ? 'fill-white' : 'fill-slate-400',
                   )}
-                  fontSize={dept.nombdep === 'CALLAO' ? 7 : 9}
+                  fontSize={8}
                   style={{
                     textShadow: hasData
-                      ? '0 1px 2px rgba(0,0,0,0.5)'
+                      ? '0 1px 3px rgba(0,0,0,0.6), 0 0 2px rgba(0,0,0,0.3)'
                       : 'none',
                   }}
                 >
-                  {abbr}
+                  {prov.nombprov.length > 12
+                    ? prov.nombprov.slice(0, 10) + '…'
+                    : prov.nombprov}
                 </text>
               </g>
             );
@@ -185,50 +124,55 @@ export function PeruDepartmentMap({
         </svg>
 
         {/* Tooltip on hover */}
-        {hoveredDept && (
-          <div className="pointer-events-none absolute left-1/2 top-0 z-10 -translate-x-1/2 -translate-y-full rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-lg">
-            <p className="text-xs font-bold text-slate-900">
-              {hoveredDept.charAt(0) + hoveredDept.slice(1).toLowerCase()}
-            </p>
-            {(() => {
-              const slug = NOMBDEP_TO_ID[hoveredDept];
-              const leader = slug ? getLeaderInfo(departmentRankings[slug]) : null;
-              if (!leader) return <p className="text-[11px] text-slate-400">Sin datos</p>;
-              return (
-                <p className="text-[11px] text-slate-600">
+        {hoveredProv && (() => {
+          const result = resultByProvince.get(hoveredProv);
+          return (
+            <div className="pointer-events-none absolute left-1/2 top-2 z-10 -translate-x-1/2 rounded-lg border border-slate-200 bg-white/95 px-4 py-2.5 shadow-xl backdrop-blur-sm">
+              <p className="text-xs font-bold text-slate-900">
+                {hoveredProv.charAt(0) + hoveredProv.slice(1).toLowerCase()}
+              </p>
+              {result ? (
+                <div className="mt-1 flex items-center gap-2">
                   <span
-                    className="mr-1.5 inline-block h-2 w-2 rounded-full"
-                    style={{ backgroundColor: leader.color }}
+                    className="inline-block h-2.5 w-2.5 rounded-full"
+                    style={{ backgroundColor: result.partyColor }}
                   />
-                  {leader.name} — {leader.percentage}%
-                </p>
-              );
-            })()}
-          </div>
-        )}
+                  <span className="text-[12px] text-slate-600">
+                    {result.label} — <span className="font-bold">{result.percentage}%</span>
+                  </span>
+                </div>
+              ) : (
+                <p className="mt-0.5 text-[11px] text-slate-400">Sin datos</p>
+              )}
+            </div>
+          );
+        })()}
       </div>
 
       {/* Legend */}
       <div className="w-full lg:w-auto">
-        <h4 className="mb-3 text-xs font-bold uppercase tracking-widest text-slate-500">
+        <h4 className="mb-4 text-xs font-bold uppercase tracking-widest text-slate-500">
           Lidera / Gana
         </h4>
-        <div className="flex flex-wrap gap-x-5 gap-y-2 lg:flex-col">
+        <div className="flex flex-wrap gap-x-6 gap-y-3 lg:flex-col">
           {[...legendEntries.values()].map((entry) => (
-            <div key={entry.name} className="flex items-center gap-2">
+            <div key={entry.label} className="flex items-center gap-2.5">
               <span
-                className="inline-block h-3 w-3 flex-shrink-0 rounded-sm"
+                className="inline-block h-3.5 w-3.5 flex-shrink-0 rounded-sm shadow-sm"
                 style={{ backgroundColor: entry.color }}
               />
-              <span className="text-sm font-medium text-slate-700">
-                {entry.name}
-              </span>
+              <div>
+                <span className="text-sm font-semibold text-slate-800">
+                  {entry.label}
+                </span>
+                {entry.partyName && (
+                  <span className="ml-1.5 text-xs text-slate-400">
+                    {entry.partyName}
+                  </span>
+                )}
+              </div>
             </div>
           ))}
-          <div className="flex items-center gap-2">
-            <span className="inline-block h-3 w-3 flex-shrink-0 rounded-sm bg-slate-200" />
-            <span className="text-sm font-medium text-slate-400">Sin datos</span>
-          </div>
         </div>
       </div>
     </div>

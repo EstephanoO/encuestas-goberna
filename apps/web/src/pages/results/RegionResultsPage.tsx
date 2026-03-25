@@ -102,49 +102,43 @@ export default function RegionResultsPage() {
           </a>
         </div>
 
-        <section className="rounded-2xl border border-slate-200 bg-slate-50/90 p-4 shadow-[0_24px_80px_rgba(15,23,42,0.12)] sm:p-6 lg:p-8">
-          <div className="flex flex-wrap gap-2" role="tablist" aria-label="Temas de encuesta">
-            {topicsWithData.map((topic) => (
-              <button
-                key={topic.id}
-                type="button"
-                role="tab"
-                aria-selected={selectedTopicId === topic.id}
-                onClick={() => setSelectedTopicId(topic.id)}
-                className={cn(
-                  'rounded-full border px-4 py-1.5 text-sm font-semibold transition-colors',
-                  selectedTopicId === topic.id
-                    ? 'border-primary bg-primary text-primary-foreground shadow-sm'
-                    : 'border-white bg-card text-muted-foreground shadow-sm hover:border-primary/40',
-                )}
-              >
-                {topic.label}
-              </button>
-            ))}
-          </div>
+        {/* Topic tabs */}
+        <div className="flex flex-wrap gap-2" role="tablist" aria-label="Temas de encuesta">
+          {topicsWithData.map((topic) => (
+            <button
+              key={topic.id}
+              type="button"
+              role="tab"
+              aria-selected={selectedTopicId === topic.id}
+              onClick={() => setSelectedTopicId(topic.id)}
+              className={cn(
+                'rounded-full border px-4 py-1.5 text-sm font-semibold transition-colors',
+                selectedTopicId === topic.id
+                  ? 'border-primary bg-primary text-primary-foreground shadow-sm'
+                  : 'border-slate-200 bg-white text-muted-foreground shadow-sm hover:border-primary/40',
+              )}
+            >
+              {topic.label}
+            </button>
+          ))}
+        </div>
 
-          <div className="mt-6">
-            <PeruDepartmentMap
-              activeDepartmentId={departmentId}
-              departmentRankings={DEPARTMENT_RANKINGS[selectedTopicId] ?? {}}
-              topicLabel={selectedTopic?.label ?? 'Presidencial'}
-            />
-          </div>
+        {/* Province map */}
+        <PeruDepartmentMap
+          activeDepartmentId={departmentId}
+          provinceResults={provinceResults}
+          topicLabel={selectedTopic?.label ?? 'Presidencial'}
+        />
 
-          {/* Horizontal bar chart — only for "problemas" topic */}
-          {selectedTopicId === 'problemas' && provinceResults.length > 0 && (
-            <div className="mt-6">
-              <ProblemasBarChart provinceResults={provinceResults} />
-            </div>
-          )}
+        {/* Horizontal bar chart — only for "problemas" topic */}
+        {selectedTopicId === 'problemas' && provinceResults.length > 0 && (
+          <ProblemasBarChart provinceResults={provinceResults} />
+        )}
 
-          {/* Presidential ranking chart — only for "presidentes" topic */}
-          {selectedTopicId === 'presidentes' && selectedTopic && selectedTopic.rankings.length > 0 && (
-            <div className="mt-6">
-              <PresidentialRankingChart candidates={selectedTopic.rankings} />
-            </div>
-          )}
-        </section>
+        {/* Presidential ranking chart — only for "presidentes" topic */}
+        {selectedTopicId === 'presidentes' && selectedTopic && selectedTopic.rankings.length > 0 && (
+          <PresidentialRankingChart candidates={selectedTopic.rankings} />
+        )}
 
         <RegionResultsSection departmentId={departmentId} />
       </PageContainer>
