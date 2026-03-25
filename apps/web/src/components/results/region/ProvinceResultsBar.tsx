@@ -58,6 +58,14 @@ export function ProvinceResultsBar({
   const leader = segments[0];
   const runner = segments.length > 1 ? segments[1] : null;
 
+  // Reorder for the bar: leader (left) → middle candidates → runner (right)
+  const middle = segments.slice(2);
+  const barOrder: BarSegment[] = [
+    leader,
+    ...middle,
+    ...(runner ? [runner] : []),
+  ];
+
   return (
     <div className="space-y-5">
       {/* Title */}
@@ -111,9 +119,9 @@ export function ProvinceResultsBar({
         )}
       </div>
 
-      {/* Segmented bar — width proportional to department percentage */}
+      {/* Segmented bar — leader left, runner right, rest in center */}
       <div className="flex h-8 w-full gap-[2px] overflow-hidden sm:h-10">
-        {segments.map((seg) => {
+        {barOrder.map((seg) => {
           const widthPercent = (seg.percentage / totalPercentage) * 100;
           // Split this segment into individual province blocks
           const provCount = seg.provinceCount;
