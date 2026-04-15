@@ -9,7 +9,6 @@ import { PresidencialExplorer } from './components/PresidencialExplorer';
 import { ProjectionChart } from './components/ProjectionChart';
 import { SecondRoundBanner } from './components/SecondRoundBanner';
 import { CriticalGap } from './components/CriticalGap';
-import { HeaderGoberna } from './components/HeaderGoberna';
 import { SenadoPage } from './components/SenadoPage';
 import { DiputadosPage } from './components/DiputadosPage';
 import { MOCK_ONPE, MOCK_DATUM } from './data/mock';
@@ -89,26 +88,11 @@ function App() {
 
   const sourceLabel = tab === 'onpe' ? 'ONPE parcial' : 'Datum CR 100%';
 
-  if (view === 'senado') {
-    return (
-      <>
-        <HeaderGoberna />
-        <SenadoPage />
-      </>
-    );
-  }
-  if (view === 'diputados') {
-    return (
-      <>
-        <HeaderGoberna />
-        <DiputadosPage />
-      </>
-    );
-  }
+  if (view === 'senado') return <SenadoPage />;
+  if (view === 'diputados') return <DiputadosPage />;
 
   return (
     <>
-      <HeaderGoberna />
       <div className="container">
       <Hero pctActas={data.pctActas} onRefresh={refresh} loading={loading} theme={theme} onThemeChange={setTheme} />
       <StatusBar d={data} />
