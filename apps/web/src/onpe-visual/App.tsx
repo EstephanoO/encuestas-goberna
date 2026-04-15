@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import './styles/dashboard.css';
 import { Hero } from './components/Hero';
 import { StatusBar } from './components/StatusBar';
@@ -28,8 +29,7 @@ const PARTY_MAP: Record<CandKey, { party: string; initials: string }> = {
 
 type View = 'presidencial' | 'senado' | 'diputados';
 
-function getViewFromHash(): View {
-  const h = window.location.hash;
+function viewFromHash(h: string): View {
   if (h === '#senado') return 'senado';
   if (h === '#diputados') return 'diputados';
   return 'presidencial';
@@ -38,13 +38,9 @@ function getViewFromHash(): View {
 function App() {
   const [theme, setTheme] = useTheme();
   const [tab, setTab] = useState<TabId>('onpe');
-  const [view, setView] = useState<View>(getViewFromHash);
-
-  useEffect(() => {
-    const onHash = () => setView(getViewFromHash());
-    window.addEventListener('hashchange', onHash);
-    return () => window.removeEventListener('hashchange', onHash);
-  }, []);
+  // Reactivo a cambios de hash via react-router (Link, useNavigate)
+  const { hash } = useLocation();
+  const view = viewFromHash(hash);
   const [loading, setLoading] = useState(false);
   const [onpeData, setOnpeData] = useState<DashboardData>(MOCK_ONPE);
   const [datumData, setDatumData] = useState<DashboardData>(MOCK_DATUM);
