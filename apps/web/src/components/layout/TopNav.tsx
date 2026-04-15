@@ -29,7 +29,7 @@ export function TopNav() {
             className="h-7 w-7 shrink-0 object-contain"
           />
           <span className="text-base font-bold text-foreground">
-            Encuesta Presidencial 2026
+            Resultados Presidenciales
           </span>
         </Link>
 
