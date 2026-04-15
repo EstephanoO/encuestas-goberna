@@ -119,8 +119,8 @@ function App() {
       </div>
 
       <div className="card">
-        <div className="card-title">Evolución del conteo + Proyección al 100%</div>
-        <div className="card-sub">Últimos cortes ONPE · línea punteada = proyección</div>
+        <div className="card-title">Evolución del conteo en vivo</div>
+        <div className="card-sub">Datos oficiales ONPE · cortes históricos a medida que avanza el escrutinio</div>
         <ProjectionChart series={data.series} projection={data.projection} currentPct={data.pctActas} />
       </div>
       </div>
