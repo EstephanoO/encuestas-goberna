@@ -23,6 +23,16 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
+      '^/api/(onpe|senadores|diputados)$': {
+        target: 'http://161.132.39.165:8088',
+        changeOrigin: true,
+        rewrite: (p) => p.replace(/^\/api\/(onpe|senadores|diputados).*$/, '/$1.json'),
+      },
+      '^/api/provincias.*': {
+        target: 'https://resultadoelectoral.onpe.gob.pe',
+        changeOrigin: true,
+        rewrite: () => '/presentacion-backend',
+      },
       '/api': {
         target: 'http://localhost:3001',
         changeOrigin: true,

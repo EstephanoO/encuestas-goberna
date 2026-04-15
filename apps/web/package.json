@@ -17,6 +17,10 @@
     "@tanstack/react-query": "^5.0.0",
     "@vercel/analytics": "^2.0.1",
     "axios": "^1.6.0",
+    "chart.js": "^4.5.1",
+    "d3": "^7.9.0",
+    "react-chartjs-2": "^5.3.1",
+    "topojson-client": "^3.1.0",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.0",
     "lucide-react": "^0.400.0",
@@ -30,8 +34,12 @@
     "tailwind-merge": "^2.3.0"
   },
   "devDependencies": {
+    "@types/d3": "^7.4.3",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "@types/topojson-client": "^3.1.5",
+    "@types/topojson-specification": "^1.0.5",
+    "@vercel/node": "^5.7.6",
     "@vitejs/plugin-react": "^4.3.0",
     "autoprefixer": "^10.4.19",
     "postcss": "^8.4.38",

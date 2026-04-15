@@ -1,11 +1,12 @@
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { BarChart2, Vote } from 'lucide-react';
+import { BarChart2, Vote, LineChart } from 'lucide-react';
 import { hasVotedLocally } from '@/lib/fingerprint';
 
 const ALL_LINKS = [
   { to: '/votar', label: 'Votar', icon: Vote, hideAfterVote: true },
   { to: '/resultados', label: 'Resultados', icon: BarChart2, hideAfterVote: false },
+  { to: '/resultados-2026', label: 'Resultados 2026', icon: LineChart, hideAfterVote: false },
 ];
 
 export function TopNav() {

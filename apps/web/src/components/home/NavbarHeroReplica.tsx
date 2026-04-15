@@ -6,6 +6,7 @@ const NAV_ITEMS = [
   { label: 'Inicio', href: '#inicio' },
   { label: 'Encuestas', href: '#resultados-encuestas' },
   { label: 'Votar', href: '#encuesta-votar' },
+  { label: 'Resultados 2026', href: '/resultados-2026' },
   { label: 'Contáctanos', href: '#contacto' },
 ] as const;
 
