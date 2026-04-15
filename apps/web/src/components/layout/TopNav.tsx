@@ -29,7 +29,7 @@ export function TopNav() {
             className="h-7 w-7 shrink-0 object-contain"
           />
           <span className="text-base font-bold text-foreground">
-            Resultados Presidenciales
+            Mapa de Poder 2026
           </span>
         </Link>
 
