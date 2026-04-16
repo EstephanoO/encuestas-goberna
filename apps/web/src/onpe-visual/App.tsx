@@ -14,6 +14,7 @@ import { SenadoPage } from './components/SenadoPage';
 import { DiputadosPage } from './components/DiputadosPage';
 import { AndinoPage } from './components/AndinoPage';
 import { InsightsRow } from './components/InsightsRow';
+import { ParticipacionCard } from './components/ParticipacionCard';
 import { MOCK_ONPE, MOCK_DATUM } from './data/mock';
 import { loadData } from './data/source';
 import { useTheme } from './components/ThemeToggle';
@@ -140,6 +141,7 @@ function App() {
       <CandidateStrip values={current} deltas={deltas} small={small} />
       <ProbabilityBar probs={data.probabilities} />
 
+      <ParticipacionCard />
       <InsightsRow />
 
       <div style={{ marginBottom: 16 }}>
