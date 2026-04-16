@@ -65,14 +65,36 @@ function App() {
     return { ...data.projection } as Record<CandKey, number>;
   }, [data]);
 
-  const deltas: Partial<Record<CandKey, number>> = { fujimori: 0.048, sanchez: 0.185, rla: -0.021, nieto: -0.012, belmont: -0.015 };
+  // Deltas reales: diferencia entre el último corte y el penúltimo del histórico
+  const deltas: Partial<Record<CandKey, number>> = useMemo(() => {
+    const s = data.series;
+    if (!s || s.length < 2) return {};
+    const a = s[s.length - 2], b = s[s.length - 1];
+    return {
+      fujimori: +(b.fujimori - a.fujimori).toFixed(3),
+      rla:      +(b.rla      - a.rla).toFixed(3),
+      sanchez:  +(b.sanchez  - a.sanchez).toFixed(3),
+      nieto:    +(b.nieto    - a.nieto).toFixed(3),
+      belmont:  +(b.belmont  - a.belmont).toFixed(3),
+    };
+  }, [data]);
 
   // Ranking dinámico — así cuando cambia el mock/fetch, el banner se actualiza solo
   const ranking = [...CAND_ORDER].sort((a, b) => (current[b] ?? 0) - (current[a] ?? 0));
   const [first, second, third] = ranking;
+  // Cantidad de votos derivada de data.votes (datos oficiales en vivo)
+  const fmtVotes = (n?: number) => {
+    if (!n || n <= 0) return '—';
+    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}M votos`;
+    if (n >= 1_000) return `${Math.round(n / 1000)}k votos`;
+    return `${n.toLocaleString('es-PE')} votos`;
+  };
   const small: Partial<Record<CandKey, string>> = {
-    fujimori: '2.5M votos', rla: '1.9M votos', nieto: '1.7M votos',
-    belmont: '1.5M votos', sanchez: '1.6M votos',
+    fujimori: fmtVotes(data.votes?.fujimori),
+    rla:      fmtVotes(data.votes?.rla),
+    sanchez:  fmtVotes(data.votes?.sanchez),
+    nieto:    fmtVotes(data.votes?.nieto),
+    belmont:  fmtVotes(data.votes?.belmont),
   };
 
   const refresh = async () => {
