@@ -1,6 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { Vote, BarChart2, Users } from 'lucide-react';
+import { Vote, BarChart2, Users, Globe2 } from 'lucide-react';
 
 interface NavItem {
   hash: string;
@@ -10,9 +10,10 @@ interface NavItem {
 
 // Tres entradas del dashboard ONPE — todas viven en /resultados-2026, navegan por hash.
 const NAV: NavItem[] = [
-  { hash: '',           label: 'Presidencial', icon: BarChart2 },
-  { hash: '#senado',    label: 'Senado',       icon: Vote },
-  { hash: '#diputados', label: 'Diputados',    icon: Users },
+  { hash: '',           label: 'Presidencial',    icon: BarChart2 },
+  { hash: '#senado',    label: 'Senado',          icon: Vote },
+  { hash: '#diputados', label: 'Diputados',       icon: Users },
+  { hash: '#andino',    label: 'Parlamento Andino', icon: Globe2 },
 ];
 
 export function TopNav() {

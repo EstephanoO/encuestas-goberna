@@ -1412,3 +1412,8 @@ button { font: inherit; cursor: pointer; }
   .cand-strip { grid-template-columns: repeat(2, 1fr); }
   .map-container { aspect-ratio: 3/4.5; max-height: 420px; }
 }
+
+/* Insights row responsive */
+@media (max-width: 880px) {
+  .insights-grid { grid-template-columns: 1fr !important; }
+}

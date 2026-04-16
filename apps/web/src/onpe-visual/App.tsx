@@ -12,6 +12,8 @@ import { SecondRoundBanner } from './components/SecondRoundBanner';
 import { CriticalGap } from './components/CriticalGap';
 import { SenadoPage } from './components/SenadoPage';
 import { DiputadosPage } from './components/DiputadosPage';
+import { AndinoPage } from './components/AndinoPage';
+import { InsightsRow } from './components/InsightsRow';
 import { MOCK_ONPE, MOCK_DATUM } from './data/mock';
 import { loadData } from './data/source';
 import { useTheme } from './components/ThemeToggle';
@@ -27,11 +29,12 @@ const PARTY_MAP: Record<CandKey, { party: string; initials: string }> = {
   belmont:  { party: 'País para Todos',     initials: 'RB'  },
 };
 
-type View = 'presidencial' | 'senado' | 'diputados';
+type View = 'presidencial' | 'senado' | 'diputados' | 'andino';
 
 function viewFromHash(h: string): View {
   if (h === '#senado') return 'senado';
   if (h === '#diputados') return 'diputados';
+  if (h === '#andino') return 'andino';
   return 'presidencial';
 }
 
@@ -108,6 +111,7 @@ function App() {
 
   if (view === 'senado') return <SenadoPage />;
   if (view === 'diputados') return <DiputadosPage />;
+  if (view === 'andino') return <AndinoPage />;
 
   return (
     <>
@@ -135,6 +139,8 @@ function App() {
 
       <CandidateStrip values={current} deltas={deltas} small={small} />
       <ProbabilityBar probs={data.probabilities} />
+
+      <InsightsRow />
 
       <div style={{ marginBottom: 16 }}>
         <PresidencialExplorer key={tab} regions={data.regions} source={sourceLabel} />
