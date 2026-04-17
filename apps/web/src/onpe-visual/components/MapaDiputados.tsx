@@ -39,12 +39,6 @@ function haversine(a: [number, number], b: [number, number]) {
 
 let topoCache: Topology | null = null;
 
-function riskLevel(d: DistritoDiputados): { icon: string; label: string; color: string } {
-  if (d.pctActas >= 95) return { icon: '🟢', label: 'definido', color: '#059669' };
-  if (d.pctActas >= 75) return { icon: '🟡', label: 'en disputa', color: '#d97706' };
-  return { icon: '🔴', label: 'puede cambiar', color: '#dc2626' };
-}
-
 interface Props { data: DiputadosData; }
 
 export function MapaDiputados({ data }: Props) {

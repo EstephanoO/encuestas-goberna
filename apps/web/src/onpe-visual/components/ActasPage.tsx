@@ -99,17 +99,6 @@ function colorFor(faltantes: number): string {
   for (const s of COLOR_SCALE) if (faltantes < s.max) return s.bg;
   return '#7f1d1d';
 }
-function colorForMetric(v: number, metric: Metric): string {
-  if (metric === 'total') {
-    if (v < 1) return '#ffffff';
-    if (v < 10) return '#fef3c7';
-    if (v < 40) return '#fdba74';
-    if (v < 100) return '#ef4444';
-    return '#7f1d1d';
-  }
-  return colorFor(v);
-}
-
 // ──────────────────────── CSS
 const PULSO_CSS = `
 .pulso-page{ position:relative; height:calc(100vh - 60px); min-height:640px; width:100%; background:#dfe7f0; overflow:hidden; color:#0f172a; font-family: 'Pontano Sans', -apple-system, sans-serif; }
@@ -303,37 +292,6 @@ const PULSO_CSS = `
 .pulso-page .maplibregl-ctrl-group{ box-shadow:0 4px 14px rgba(15,23,42,.08) !important; }
 `;
 
-// Normaliza: uppercase, sin tildes, sin guiones/underscores/parens, espacios únicos
-function norm(s: string): string {
-  return s.normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/\([^)]*\)/g, '')   // quita contenido en paréntesis: "QUISQUI (KICHKI)" → "QUISQUI"
-    .replace(/[-_]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .toUpperCase().trim();
-}
-// Aliases distrito: nombre en geojson → nombre en ONPE (tras norm())
-const DIST_ALIASES: Record<string, string> = {
-  'NASCA': 'NAZCA', 'NAZCA': 'NASCA',
-  'CAPAZO': 'CAPASO',
-  'SANTA RITA DE SIGUAS': 'SANTA RITA DE SIHUAS',
-  'SAN FRANCISCO DE RAVACAYCO': 'SAN FRANCISCO DE RIVACAYCO',
-  'HUAYLLO': 'IHUAYLLO',
-  'HUAYLLAY GRANDE': 'HUALLAY GRANDE',
-  'SAN JUAN DE YSCOS': 'SAN JUAN DE ISCOS',
-  'MAGDALENA VIEJA': 'PUEBLO LIBRE',
-  'RAYMONDI': 'RAIMONDI',
-  'DANIEL ALOMIAS ROBLES': 'DANIEL ALOMIA ROBLES',
-  'MILPUC': 'MILPUCC',
-  'HUAYA': 'HUALLA',
-  'AYAUCA': 'AYAVIRI',
-};
-// Aliases provincia: typos del geojson INEI
-const PROV_ALIASES: Record<string, string> = {
-  'PUIRA': 'PIURA',
-  'VICTOR FAFARDO': 'VICTOR FAJARDO',
-};
-
 export function ActasPage() {
   const [snap, setSnap] = useState<Snapshot | null>(null);
   const [candSnap, setCandSnap] = useState<CandSnap | null>(null);
@@ -341,10 +299,10 @@ export function ActasPage() {
   const [metric, setMetric] = useState<Metric>('jee');
   const [selSet, setSelSet] = useState<Set<string>>(new Set());  // ONPE ubigeos seleccionados
   const [hoverDist, setHoverDist] = useState<DistritoActas | null>(null);
-  const [simMode, setSimMode] = useState(false);
+  const [simMode, _setSimMode] = useState(false);
   useEffect(() => { (window as any).__simMode = simMode; }, [simMode]);
   const [simAlloc, setSimAlloc] = useState<Record<string, number>>({});  // cod → %
-  const [pres, setPres] = useState<PresData | null>(null);
+  const [_pres, setPres] = useState<PresData | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(() => typeof window !== 'undefined' ? window.innerWidth > 860 : true);
   const mapRef = useRef<MLMap | null>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -623,7 +581,7 @@ export function ActasPage() {
     }
   }, [selSet]);
 
-  const n = snap?.nacional;
+  const n = snap?.nacional!;
   const pctDone = n?.pct ?? 0;
   const pctLeft = 100 - pctDone;
 
@@ -803,7 +761,6 @@ export function ActasPage() {
       {simMode && selSet.size > 0 && <SimPanel
         selSet={selSet}
         candByUbigeo={candByUbigeo} dataByUbigeo={dataByUbigeo}
-        pres={pres}
         simAlloc={simAlloc} onSimAlloc={setSimAlloc}
         onClear={() => setSelSet(new Set())}
       />}
@@ -825,11 +782,10 @@ export function ActasPage() {
 }
 
 // ─── SIM PANEL ─ sliders por candidato + preview nacional
-function SimPanel({ selSet, candByUbigeo, dataByUbigeo, pres, simAlloc, onSimAlloc, onClear }: {
+function SimPanel({ selSet, candByUbigeo, dataByUbigeo, simAlloc, onSimAlloc, onClear }: {
   selSet: Set<string>;
   candByUbigeo: Record<string, DistCand>;
   dataByUbigeo: Record<string, DistritoActas>;
-  pres: PresData | null;
   simAlloc: Record<string, number>;
   onSimAlloc: (a: Record<string, number>) => void;
   onClear: () => void;
