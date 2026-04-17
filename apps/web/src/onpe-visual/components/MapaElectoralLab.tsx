@@ -59,6 +59,8 @@ export function MapaElectoralLab() {
   const levelRef = useRef<Level>('departamentos');
   const popupRef = useRef<maplibregl.Popup | null>(null);
   const selCodeRef = useRef<{ coddep: string; codprov: string }>({ coddep: '', codprov: '' });
+  const provColorExprRef = useRef<any>(null);  // cache province color expression for restore
+  const distColorExprRef = useRef<any>(null);  // cache district color expression
   const [level, setLevel] = useState<Level>('departamentos');
   const [selected, setSelected] = useState<RegionData | null>(null);
   const [breadcrumb, setBreadcrumb] = useState<string[]>([]);
@@ -120,9 +122,6 @@ export function MapaElectoralLab() {
           },
           { id: 'dept-line', type: 'line', source: 'peru', 'source-layer': 'departamentos',
             paint: { 'line-color': '#fff', 'line-width': 1.5 },
-          },
-          { id: 'dept-hover', type: 'line', source: 'peru', 'source-layer': 'departamentos',
-            paint: { 'line-color': '#0f172a', 'line-width': 3, 'line-opacity': 0 },
           },
           { id: 'prov-fill', type: 'fill', source: 'peru', 'source-layer': 'provincias',
             paint: { 'fill-color': '#93c5fd', 'fill-opacity': 0.7 }, layout: { visibility: 'none' },
@@ -207,6 +206,8 @@ export function MapaElectoralLab() {
 
     // Click drill-down (click outside → go back)
     map.on('click', (e) => {
+      // Dismiss popup on any click
+      popupRef.current?.remove();
       const lv = levelRef.current;
       const layerId = lv === 'distritos' ? 'dist-fill' : lv === 'provincias' ? 'prov-fill' : 'dept-fill';
       const features = map.queryRenderedFeatures(e.point, { layers: [layerId] });
@@ -318,9 +319,8 @@ export function MapaElectoralLab() {
         }
       } catch (e) { console.warn('color apply:', e); }
     };
-    // Try immediately, on load, AND on idle (tiles may not be ready yet)
     if (map.isStyleLoaded()) { apply(); map.once('idle', apply); }
-    else map.on('load', () => { apply(); map.once('idle', apply); });
+    else map.once('load', () => map.once('idle', apply));
   }, [deptColorExpr, regionsByCode]);
 
   // Color provinces by real provincial winner data
@@ -339,6 +339,7 @@ export function MapaElectoralLab() {
       const expr: any[] = ['match', ['get', 'codprov_full']];
       for (const [code, color] of Object.entries(colors)) { expr.push(code, color); }
       expr.push('#cbd5e1');
+      provColorExprRef.current = expr;  // cache for restore
       const apply = () => { try { map.setPaintProperty('prov-fill', 'fill-color', expr); } catch {} };
       if (map.isStyleLoaded()) { apply(); map.once('idle', apply); }
       else map.on('load', () => { apply(); map.once('idle', apply); });
@@ -367,6 +368,7 @@ export function MapaElectoralLab() {
       const expr: any[] = ['match', ['get', 'ubigeo']];
       for (const [ubi, color] of entries) { expr.push(ubi, color); }
       expr.push('#bfdbfe');
+      distColorExprRef.current = expr;  // cache for restore
       const apply = () => {
         try { map.setPaintProperty('dist-fill', 'fill-color', expr); } catch(e) { console.warn('dist color:', e); }
       };
@@ -375,53 +377,70 @@ export function MapaElectoralLab() {
     });
   }, []);
 
-  const resetFilters = useCallback((map: maplibregl.Map) => {
+  // Restore ALL paint properties to their data-driven originals
+  const restoreAllColors = useCallback((map: maplibregl.Map) => {
+    // Clear all filters
     ['prov-fill', 'prov-line', 'dist-fill', 'dist-line'].forEach(l => { try { map.setFilter(l, null); } catch {} });
-    map.setPaintProperty('dept-fill', 'fill-opacity', 0.85);
-    map.setPaintProperty('dept-line', 'line-color', '#fff');
-    map.setPaintProperty('prov-fill', 'fill-opacity', 0.7);
-    map.setPaintProperty('prov-fill', 'fill-color', '#93c5fd');
-    // Re-apply dept colors
+    // Dept: restore color expression + opacity
     if (typeof deptColorExpr !== 'string') {
       try { map.setPaintProperty('dept-fill', 'fill-color', deptColorExpr); } catch {}
     }
+    map.setPaintProperty('dept-fill', 'fill-opacity', 0.85);
+    map.setPaintProperty('dept-line', 'line-color', '#fff');
+    // Prov: restore cached color expression
+    if (provColorExprRef.current) {
+      try { map.setPaintProperty('prov-fill', 'fill-color', provColorExprRef.current); } catch {}
+    }
+    map.setPaintProperty('prov-fill', 'fill-opacity', 0.7);
+    // Dist: restore cached color expression
+    if (distColorExprRef.current) {
+      try { map.setPaintProperty('dist-fill', 'fill-color', distColorExprRef.current); } catch {}
+    }
+    map.setPaintProperty('dist-fill', 'fill-opacity', 0.7);
   }, [deptColorExpr]);
 
   const goBack = useCallback(() => {
     const map = mapRef.current; if (!map) return;
+    popupRef.current?.remove();
     if (level === 'distritos') {
       setLevel('provincias');
+      // Hide districts
       map.setLayoutProperty('dist-fill', 'visibility', 'none');
       map.setLayoutProperty('dist-line', 'visibility', 'none');
-      map.setPaintProperty('prov-fill', 'fill-opacity', 0.7);
-      // Re-filter provs to current dept
       map.setFilter('dist-fill', null);
       map.setFilter('dist-line', null);
+      // Restore province colors (were darkened)
+      if (provColorExprRef.current) {
+        try { map.setPaintProperty('prov-fill', 'fill-color', provColorExprRef.current); } catch {}
+      }
+      map.setPaintProperty('prov-fill', 'fill-opacity', 0.7);
       selCodeRef.current.codprov = '';
-      // Zoom back to dept bounds — use current view slightly zoomed out
       map.flyTo({ zoom: Math.max(map.getZoom() - 2, 7), duration: 800 });
       setBreadcrumb(prev => prev.slice(0, 1));
     } else if (level === 'provincias') {
       setLevel('departamentos');
+      // Hide provinces
       map.setLayoutProperty('prov-fill', 'visibility', 'none');
       map.setLayoutProperty('prov-line', 'visibility', 'none');
-      resetFilters(map);
+      // Restore dept colors
+      restoreAllColors(map);
       selCodeRef.current = { coddep: '', codprov: '' };
       map.flyTo({ center: [-75, -9.5], zoom: 5, duration: 800 });
       setBreadcrumb([]);
     }
     setSelected(null);
-  }, [level, resetFilters]);
+  }, [level, restoreAllColors]);
 
   const goHome = useCallback(() => {
     const map = mapRef.current; if (!map) return;
+    popupRef.current?.remove();
     setLevel('departamentos');
     ['prov-fill', 'prov-line', 'dist-fill', 'dist-line'].forEach(l => map.setLayoutProperty(l, 'visibility', 'none'));
-    resetFilters(map);
+    restoreAllColors(map);
     selCodeRef.current = { coddep: '', codprov: '' };
     map.flyTo({ center: [-75, -9.5], zoom: 5, duration: 800 });
     setBreadcrumb([]); setSelected(null);
-  }, [resetFilters]);
+  }, [restoreAllColors]);
 
   return (
     <div style={{ display: 'flex', height: 'calc(100vh - 60px)', background: '#f0f4f8' }}>
