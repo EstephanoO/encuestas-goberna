@@ -40,9 +40,21 @@ const PARTY_COLORS: Record<string, string> = {
   '25': '#475569', // Cooperación Popular
   '29': '#7F1D1D', // Perú Primero
   '37': '#9333EA', // Un Camino Diferente
-  '80': '#94A3B8', // Votos en Blanco
+  '32': '#3F51B5', // Podemos Perú
+  '17': '#607D8B', // Demócrata Unido
+  '7':  '#CDDC39', // Avanza País
+  '27': '#B71C1C', // Perú Libre
+  '33': '#FF9800', // Primero la Gente
+  '22': '#9C27B0', // Partido Morado
+  '80': '#D1D5DB', // Votos en Blanco
+  '81': '#9CA3AF', // Votos Nulos
 };
 const FALLBACK_PARTY_COLOR = '#64748B';
+// Party code → DNI (for photo lookup in sidebar)
+const CODE_DNI: Record<string, string> = {
+  '8': '10001088', '35': '07845838', '10': '16002918', '16': '06506278',
+  '14': '09177250', '23': '09177250',
+};
 
 // INEI department codes (what the tiles use) — NOT ONPE codes
 const DEPT_CODES: Record<string, string> = {
@@ -148,6 +160,7 @@ export function MapaElectoralLab() {
   const [presData, setPresData] = useState<any>(null);
   const [candData, setCandData] = useState<any>(null);
   const [ineiToOnpe, setIneiToOnpe] = useState<Record<string, string>>({});
+  const [provData, setProvData] = useState<any[]>([]);
 
   useEffect(() => { levelRef.current = level; }, [level]);
 
@@ -156,7 +169,13 @@ export function MapaElectoralLab() {
       fetch('/api/onpe').then(r => r.ok ? r.json() : null),
       fetch('/api/actas-candidatos').then(r => r.ok ? r.json() : null),
       fetch('/inei-to-onpe.json').then(r => r.ok ? r.json() : {}),
-    ]).then(([p, c, m]) => { if (p) setPresData(p); if (c) setCandData(c); setIneiToOnpe(m || {}); });
+      fetch('/api/provincias-pres').then(r => r.ok ? r.json() : null),
+    ]).then(([p, c, m, prov]) => {
+      if (p) setPresData(p);
+      if (c) setCandData(c);
+      setIneiToOnpe(m || {});
+      if (prov?.provincias) setProvData(prov.provincias);
+    });
   }, []);
 
   // Color expressions for provinces + districts derived from candData distritos.
@@ -303,10 +322,9 @@ export function MapaElectoralLab() {
         const pd = (window as any).__presData;
         let body = '';
 
-        if ((lv === 'departamentos' || lv === 'provincias') && (window as any).__regionsByCode?.[code]) {
+        if (lv === 'departamentos' && (window as any).__regionsByCode?.[code]) {
           const r = (window as any).__regionsByCode[code] as RegionData;
           const ranked = [...r.results].sort((a, b) => b.pct - a.pct).slice(0, 2);
-          // Estimar votos por region usando % sobre votosEmitidos proporcionales a actas revisadas.
           const regionInfo = pd?.regions?.find((x: any) => DEPT_CODES[x.name] === code);
           const regionVotes = regionInfo && pd?.actasRevisadas
             ? (pd.votosEmitidos ?? 0) * (regionInfo.actasRevisadas / pd.actasRevisadas)
@@ -315,6 +333,29 @@ export function MapaElectoralLab() {
           ranked.forEach((c, i) => {
             body += buildPopupRow({ name: c.name, color: c.color, pct: c.pct, votos: regionVotes ? regionVotes * (c.pct / 100) : undefined }, i === 0);
           });
+        } else if (lv === 'provincias') {
+          // Real province data from provincias-pres API
+          const codprov_full = p.codprov_full || (code + (p.codprov || ''));
+          const prov = (window as any).__provByIneiCode?.[codprov_full];
+          if (prov?.partidos?.length) {
+            body += buildPopupHeader(name, 'Provincia', prov.pctActas);
+            prov.partidos.slice(0, 3).forEach((t: any, i: number) => {
+              body += buildPopupRow({
+                name: t.candidato || t.partido || '?',
+                color: PARTY_COLORS[String(Number(t.codigo))] || FALLBACK_PARTY_COLOR,
+                pct: t.pct ?? 0, votos: t.votos,
+              }, i === 0);
+            });
+          } else if ((window as any).__regionsByCode?.[code]) {
+            const r = (window as any).__regionsByCode[code] as RegionData;
+            body += buildPopupHeader(name, 'Provincia', r.pctActas);
+            r.results.slice(0, 2).forEach((c, i) => {
+              body += buildPopupRow({ name: c.name, color: c.color, pct: c.pct }, i === 0);
+            });
+          } else {
+            body += buildPopupHeader(name, 'Provincia');
+            body += `<div style="font-size:11px;color:#94a3b8;padding:10px 0;text-align:center">Sin datos</div>`;
+          }
         } else if (lv === 'distritos' && (window as any).__candByUbigeo) {
           const onpeUbi = (window as any).__ineiToOnpe?.[ubigeo] || ubigeo;
           const cd = (window as any).__candByUbigeo?.[onpeUbi];
@@ -364,10 +405,34 @@ export function MapaElectoralLab() {
       const p = features[0].properties || {};
       const name = p.departamento || p.provincia || p.distrito || '?';
       const code = p.coddep || '';
-      const region = (window as any).__regionsByCode?.[code] || null;
-
-      if (region) setSelected(region);
-      else setSelected({ name, winner: '?', winnerColor: '#94a3b8', winnerPct: 0, results: [] });
+      // Set sidebar data based on current level
+      if (lv === 'provincias') {
+        const codprov_full = p.codprov_full || (code + (p.codprov || ''));
+        const prov = (window as any).__provByIneiCode?.[codprov_full];
+        if (prov?.partidos?.length) {
+          const results = prov.partidos.map((t: any) => {
+            const codKey = String(Number(t.codigo || t.cod));
+            return {
+              key: codKey, name: t.candidato || t.partido || '?',
+              party: t.partido || '', color: PARTY_COLORS[codKey] || FALLBACK_PARTY_COLOR,
+              pct: t.pct ?? 0,
+            };
+          });
+          const winner = results[0];
+          setSelected({
+            name, winner: winner?.name || '?', winnerColor: winner?.color || '#94a3b8',
+            winnerPct: winner?.pct || 0, results, pctActas: prov.pctActas,
+          });
+        } else {
+          const region = (window as any).__regionsByCode?.[code] || null;
+          if (region) setSelected(region);
+          else setSelected({ name, winner: '?', winnerColor: '#94a3b8', winnerPct: 0, results: [] });
+        }
+      } else {
+        const region = (window as any).__regionsByCode?.[code] || null;
+        if (region) setSelected(region);
+        else setSelected({ name, winner: '?', winnerColor: '#94a3b8', winnerPct: 0, results: [] });
+      }
 
       // Calculate bounds from the clicked feature geometry
       const geom = features[0].geometry;
@@ -490,10 +555,19 @@ export function MapaElectoralLab() {
       }
       (window as any).__candByUbigeo = byUbi;
     }
-    // Mantengo __ineiToOnpe como identidad (el override del VPS puede reintroducir casos puntuales).
     (window as any).__ineiToOnpe = ineiToOnpe || {};
     (window as any).__presData = presData;
-  }, [candData, ineiToOnpe, presData]);
+    // Province data indexed by INEI 4-digit code (for popup lookups)
+    if (provData.length) {
+      const byCode: Record<string, any> = {};
+      for (const p of provData) {
+        // Convert ONPE province ubigeo to INEI using onpeToIneiUbigeo
+        const ineiProv = onpeToIneiUbigeo(String(p.ubigeo).padStart(6, '0')).slice(0, 4);
+        byCode[ineiProv] = p;
+      }
+      (window as any).__provByIneiCode = byCode;
+    }
+  }, [candData, ineiToOnpe, presData, provData]);
 
   // Color districts using in-memory winner map derived from candData.
   useEffect(() => {
@@ -660,7 +734,7 @@ export function MapaElectoralLab() {
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 <CandidatePhoto
-                  dni={CAND_DNI[selected.results[0]?.key] || undefined}
+                  dni={CODE_DNI[selected.results[0]?.key] || CAND_DNI[selected.results[0]?.key] || undefined}
                   nombre={selected.winner}
                   color={selected.winnerColor}
                   size={56}
@@ -689,7 +763,7 @@ export function MapaElectoralLab() {
               return (
                 <div key={c.key} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderTop: i ? '1px solid rgba(15,23,42,.04)' : 'none' }}>
                   <CandidatePhoto
-                    dni={CAND_DNI[c.key] || undefined}
+                    dni={CODE_DNI[c.key] || CAND_DNI[c.key] || undefined}
                     nombre={c.name}
                     color={c.color}
                     size={38}
@@ -775,7 +849,7 @@ export function MapaElectoralLab() {
               {/* Cabeceras: foto + nombre a los laterales, "Otros" al centro */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, gap: 8 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-                  <CandidatePhoto dni={CAND_DNI[a.key]} nombre={a.name} color={a.color} size={32} ring={false} />
+                  <CandidatePhoto dni={CODE_DNI[a.key] || CAND_DNI[a.key]} nombre={a.name} color={a.color} size={32} ring={false} />
                   <div style={{ minWidth: 0, overflow: 'hidden' }}>
                     <div style={{ fontSize: 12, fontWeight: 800, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{shortA}</div>
                     <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11, fontWeight: 700, color: a.color }}>{a.pct.toFixed(2)}%</div>
@@ -792,7 +866,7 @@ export function MapaElectoralLab() {
                     <div style={{ fontSize: 12, fontWeight: 700, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{shortB}</div>
                     <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11, fontWeight: 700, color: b.color }}>{b.pct.toFixed(2)}%</div>
                   </div>
-                  <CandidatePhoto dni={CAND_DNI[b.key]} nombre={b.name} color={b.color} size={32} ring={false} />
+                  <CandidatePhoto dni={CODE_DNI[b.key] || CAND_DNI[b.key]} nombre={b.name} color={b.color} size={32} ring={false} />
                 </div>
               </div>
 
