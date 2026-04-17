@@ -97,22 +97,40 @@ export function MapProvincias<T extends ProvinciaLike>({ deptNombre, provincias,
         .fitExtent([[margin, margin], [W - margin, H - margin]], subFc as any);
       const pathGen = d3.geoPath(projection as any);
 
-      // index provincias by normalized name
+      // Index provincias por ubigeo (primario) y por nombre normalizado (fallback).
+      // El geojson trae FIRST_IDPR (4 dígitos DDPP) y el API ONPE trae ubigeo que
+      // puede ser 4 o 6 dígitos — normalizamos a los primeros 4.
+      const provByUbi: Record<string, T> = {};
       const provByName: Record<string, T> = {};
-      provincias.forEach(p => { provByName[norm(p.nombre)] = p; });
+      provincias.forEach(p => {
+        const u4 = String(p.ubigeo || '').slice(0, 4);
+        if (u4) provByUbi[u4] = p;
+        provByName[norm(p.nombre)] = p;
+      });
+      const lookup = (f: any): T | undefined => {
+        const ubi = String(f.properties?.FIRST_IDPR || '').slice(0, 4);
+        if (ubi && provByUbi[ubi]) return provByUbi[ubi];
+        return provByName[norm(f.properties?.NOMBPROV || '')];
+      };
 
       const svg = d3.select(el).append('svg')
         .attr('viewBox', `0 0 ${W} ${H}`)
         .attr('preserveAspectRatio', 'xMidYMid meet');
 
+      // El mouseleave del mapa completo es el único que limpia el hover.
+      // Los mouseenter por path son los únicos que lo setean. Así evitamos
+      // el flicker donde `leave` de A pisa al `enter` de B al cruzar el
+      // borde entre provincias.
+      svg.on('mouseleave', () => { onHoverRef.current?.(null); });
+
+      let hoveredEl: any = null;
       svg.selectAll('path')
         .data(matches)
         .join('path')
         .attr('d', pathGen as any)
         .attr('class', 'prov-path animate-in')
         .attr('fill', (f: any) => {
-          const name = norm(f.properties?.NOMBPROV || '');
-          const p = provByName[name];
+          const p = lookup(f);
           if (!p || !p.ganador) return '#2a2d38';
           return colorOfRef.current(p.ganador.codigo);
         })
@@ -120,20 +138,19 @@ export function MapProvincias<T extends ProvinciaLike>({ deptNombre, provincias,
         .attr('stroke-width', 0.7)
         .style('animation-delay', (_d: any, i: number) => `${i * 40}ms`)
         .on('mouseenter', function (this: any, _e, f: any) {
-          const name = norm(f.properties?.NOMBPROV || '');
+          if (hoveredEl && hoveredEl !== this) {
+            d3.select(hoveredEl).attr('stroke', '#fff').attr('stroke-width', 0.7);
+          }
+          hoveredEl = this;
           d3.select(this).attr('stroke', '#000').attr('stroke-width', 1.5);
-          onHoverRef.current?.(provByName[name] || null);
-        })
-        .on('mouseleave', function (this: any) {
-          d3.select(this).attr('stroke', '#fff').attr('stroke-width', 0.7);
-          onHoverRef.current?.(null);
+          onHoverRef.current?.(lookup(f) || null);
         });
 
       // Labels: nombre provincia + % ganador
       const labelG = svg.append('g').attr('class', 'dept-labels').style('pointer-events', 'none');
       matches.forEach((f: any, i: number) => {
         const name = f.properties?.NOMBPROV || '';
-        const p = provByName[norm(name)];
+        const p = lookup(f);
         const centroid = pathGen.centroid(f as any);
         if (isNaN(centroid[0])) return;
         const fs = Math.min(11, Math.max(7, W / 60));
