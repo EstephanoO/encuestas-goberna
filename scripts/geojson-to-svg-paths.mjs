@@ -62,9 +62,13 @@ function pointLineDistance(p, a, b) {
   return Math.hypot(p[0] - (a[0] + t * dx), p[1] - (a[1] + t * dy));
 }
 
+// Tolerancia ajustada a 0.35 para vertices con mayor precisión.
+// Produce paths más suaves sin inflar demasiado el bundle.
+const SIMPLIFY_TOLERANCE = 0.35;
+
 function ringToPath(ring) {
   const projected = ring.map(([lng, lat]) => project(lng, lat));
-  const simplified = simplify(projected, 1.2);
+  const simplified = simplify(projected, SIMPLIFY_TOLERANCE);
   if (simplified.length < 3) return '';
   return 'M' + simplified.map(([x, y]) => `${x},${y}`).join('L') + 'Z';
 }

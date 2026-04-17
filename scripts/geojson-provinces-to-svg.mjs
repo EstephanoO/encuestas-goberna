@@ -103,7 +103,7 @@ for (const [deptName, features] of deptFeatures) {
 
   function ringToPath(ring) {
     const projected = ring.map(([lng, lat]) => project(lng, lat));
-    const simplified = simplify(projected, 1.0);
+    const simplified = simplify(projected, 0.35);
     if (simplified.length < 3) return '';
     return 'M' + simplified.map(([x, y]) => `${x},${y}`).join('L') + 'Z';
   }

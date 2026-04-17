@@ -800,13 +800,6 @@ export function ActasPage() {
       </div>
 
       {/* SIMULATION PANEL · BOTTOM-RIGHT (aparece al seleccionar) */}
-      {/* TOGGLE MODO SIMULACIÓN (top-right, abajo de la legend) */}
-      {snap && (
-        <button onClick={() => setSimMode(m => !m)} className={`sim-toggle ${simMode ? 'on' : ''}`}>
-          {simMode ? '● SIMULANDO' : '▶ Simular'}
-        </button>
-      )}
-
       {simMode && selSet.size > 0 && <SimPanel
         selSet={selSet}
         candByUbigeo={candByUbigeo} dataByUbigeo={dataByUbigeo}

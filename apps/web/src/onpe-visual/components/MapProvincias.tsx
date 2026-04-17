@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import * as d3 from 'd3';
 import type { Feature, FeatureCollection, Geometry } from 'geojson';
 
-const PROV_URL = '/peru_provincial.geojson';
+const PROV_URL = '/peru-provincias.geojson';
 
 // Mapeo depto name normalizado (como aparece en GeoJSON FIRST_NOMB vs el que uso en la app)
 const DEPT_MATCH: Record<string, string[]> = {
