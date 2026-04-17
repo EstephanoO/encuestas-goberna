@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { Landmark, Map as MapIcon, MapPin, Building2, ArrowLeft, ChevronRight } from 'lucide-react';
+import { Map as MapIcon, MapPin, Building2, ArrowLeft, ChevronRight } from 'lucide-react';
 import { CandidatePhoto } from './CandidatePhoto';
 
 const TILE_URL = 'https://encuesta.institutogoberna.com/tiles/{z}/{x}/{y}.pbf';
@@ -33,40 +33,41 @@ const DEPT_CODES: Record<string, string> = {
   'Puno':'21','San Martín':'22','Tacna':'23','Tumbes':'24','Ucayali':'25',
 };
 
-// Row matching sidebar layout: foto + nombre + partido + barra + pct
+function fmtVotos(v?: number) {
+  if (!v || v <= 0) return '—';
+  if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(2)}M`;
+  if (v >= 1_000) return `${Math.round(v / 1000).toLocaleString('es-PE')}k`;
+  return v.toLocaleString('es-PE');
+}
+
+// Compact row: marker (star or line) + name + votes · pct. No photo.
 function buildPopupRow(
-  c: { key: string; name: string; party?: string; color: string; pct: number },
-  maxPct: number,
-  isFirst: boolean,
+  c: { name: string; color: string; pct: number; votos?: number },
+  isWinner: boolean,
 ) {
-  const dni = CAND_DNI[c.key] || '';
-  const width = Math.max(0, Math.min(100, (c.pct / (maxPct || 1)) * 100));
-  const border = isFirst ? 'none' : '1px solid rgba(15,23,42,.05)';
-  const party = c.party || CAND_PARTIES[c.key] || '';
-  return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-top:${border}">
-    ${dni
-      ? `<img src="/fotos/${dni}.jpg" style="width:34px;height:34px;border-radius:50%;object-fit:cover;border:2px solid ${c.color};flex-shrink:0" onerror="this.style.display='none'">`
-      : `<div style="width:34px;height:34px;border-radius:50%;background:${c.color}22;border:2px solid ${c.color};flex-shrink:0"></div>`}
-    <div style="flex:1;min-width:0">
-      <div style="font-size:12.5px;font-weight:700;color:#0f172a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.name}</div>
-      ${party ? `<div style="font-size:10px;color:#94a3b8">${party}</div>` : ''}
-      <div style="height:3px;background:#f1f5f9;border-radius:2px;margin-top:4px;overflow:hidden">
-        <div style="height:100%;width:${width}%;background:${c.color};border-radius:2px"></div>
-      </div>
+  const marker = isWinner
+    ? `<span style="display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;color:${c.color};flex-shrink:0">★</span>`
+    : `<span style="display:inline-block;width:3px;height:14px;background:${c.color};border-radius:2px;flex-shrink:0"></span>`;
+  const nameStyle = isWinner
+    ? `font-weight:800;color:#0f172a`
+    : `font-weight:600;color:#334155`;
+  const votosText = typeof c.votos === 'number' && c.votos > 0 ? fmtVotos(c.votos) : null;
+  return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0">
+    ${marker}
+    <div style="flex:1;min-width:0;font-size:12.5px;${nameStyle};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.name}</div>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#64748b;white-space:nowrap">
+      ${votosText ? `<span>${votosText}</span><span style="color:#cbd5e1;margin:0 5px">·</span>` : ''}<strong style="color:${c.color};font-weight:800">${c.pct.toFixed(2)}%</strong>
     </div>
-    <div style="font-family:'JetBrains Mono',monospace;font-size:12.5px;font-weight:700;color:${c.color};min-width:56px;text-align:right">${c.pct.toFixed(2)}%</div>
   </div>`;
 }
 
-function buildPopupHeader(name: string, levelLabel: string, pctActas?: number, winner?: { name: string; color: string }) {
-  const surname = winner ? (winner.name.split(' ').slice(-2, -1)[0] || winner.name.split(' ').pop() || '?') : '';
-  return `<div style="padding:2px 0 8px;border-bottom:1px solid rgba(15,23,42,.06);margin-bottom:6px">
+function buildPopupHeader(name: string, levelLabel: string, pctActas?: number) {
+  return `<div style="padding:2px 0 6px;border-bottom:1px solid rgba(15,23,42,.06);margin-bottom:4px">
     <div style="font-family:Montserrat,sans-serif;font-weight:800;font-size:15px;color:#0f172a;margin-bottom:2px">${name}</div>
     <div style="display:flex;align-items:center;gap:8px;font-size:10px;font-family:'JetBrains Mono',monospace;color:#94a3b8">
       <span style="letter-spacing:1.2px;font-weight:700">${levelLabel.toUpperCase()}</span>
       ${typeof pctActas === 'number' ? `<span style="color:#cbd5e1">·</span><span>${pctActas.toFixed(1)}% actas</span>` : ''}
     </div>
-    ${winner ? `<div style="margin-top:6px;display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:999px;background:${winner.color}14;border:1px solid ${winner.color}33"><span style="width:6px;height:6px;border-radius:50%;background:${winner.color}"></span><span style="font-size:9.5px;font-weight:800;letter-spacing:1.2px;font-family:'JetBrains Mono',monospace;color:${winner.color}">GANA ${surname.toUpperCase()}</span></div>` : ''}
   </div>`;
 }
 
@@ -231,15 +232,21 @@ export function MapaElectoralLab() {
         if (!popupRef.current) popupRef.current = new maplibregl.Popup({ closeButton: false, closeOnClick: false, offset: 14, maxWidth: '320px' });
 
         const levelLabel = lv === 'departamentos' ? 'Departamento' : lv === 'provincias' ? 'Provincia' : 'Distrito';
+        const pd = (window as any).__presData;
         let body = '';
 
         if ((lv === 'departamentos' || lv === 'provincias') && (window as any).__regionsByCode?.[code]) {
           const r = (window as any).__regionsByCode[code] as RegionData;
-          const ranked = [...r.results].sort((a, b) => b.pct - a.pct);
-          const winner = ranked[0];
-          const maxPct = winner?.pct || 1;
-          body += buildPopupHeader(name, levelLabel, r.pctActas, winner ? { name: winner.name, color: winner.color } : undefined);
-          ranked.forEach((c, i) => { body += buildPopupRow(c, maxPct, i === 0); });
+          const ranked = [...r.results].sort((a, b) => b.pct - a.pct).slice(0, 2);
+          // Estimar votos por region usando % sobre votosEmitidos proporcionales a actas revisadas.
+          const regionInfo = pd?.regions?.find((x: any) => DEPT_CODES[x.name] === code);
+          const regionVotes = regionInfo && pd?.actasRevisadas
+            ? (pd.votosEmitidos ?? 0) * (regionInfo.actasRevisadas / pd.actasRevisadas)
+            : 0;
+          body += buildPopupHeader(name, levelLabel, r.pctActas);
+          ranked.forEach((c, i) => {
+            body += buildPopupRow({ name: c.name, color: c.color, pct: c.pct, votos: regionVotes ? regionVotes * (c.pct / 100) : undefined }, i === 0);
+          });
         } else if (lv === 'distritos' && (window as any).__candByUbigeo) {
           const onpeUbi = (window as any).__ineiToOnpe?.[ubigeo] || ubigeo;
           const cd = (window as any).__candByUbigeo?.[onpeUbi];
@@ -247,17 +254,14 @@ export function MapaElectoralLab() {
             const rows = cd.top3.map((t: any) => {
               const candKey = PARTIDO_TO_CAND[String(Number(t.cod))] || '';
               return {
-                key: candKey || String(t.cod),
                 name: t.cand || t.partido || '?',
-                party: t.partido || CAND_PARTIES[candKey] || '',
                 color: candKey ? CAND_COLORS[candKey] : '#94a3b8',
                 pct: t.pct ?? 0,
+                votos: t.votos,
               };
-            }).sort((a: any, b: any) => b.pct - a.pct);
-            const winner = rows[0];
-            const maxPct = winner?.pct || 1;
-            body += buildPopupHeader(name, levelLabel, cd.pct, winner ? { name: winner.name, color: winner.color } : undefined);
-            rows.forEach((c: any, i: number) => { body += buildPopupRow(c, maxPct, i === 0); });
+            }).sort((a: any, b: any) => b.pct - a.pct).slice(0, 2);
+            body += buildPopupHeader(name, levelLabel, cd.pct);
+            rows.forEach((c: any, i: number) => { body += buildPopupRow(c, i === 0); });
           } else {
             body += buildPopupHeader(name, levelLabel);
             body += `<div style="font-size:11px;color:#94a3b8;padding:10px 0;text-align:center">Sin datos de candidatos</div>`;
@@ -267,7 +271,7 @@ export function MapaElectoralLab() {
           body += `<div style="font-size:11px;color:#94a3b8;padding:10px 0;text-align:center">Sin datos disponibles</div>`;
         }
 
-        const html = `<div style="font-family:Montserrat,sans-serif;min-width:260px">${body}</div>`;
+        const html = `<div style="font-family:Montserrat,sans-serif;min-width:240px">${body}</div>`;
         popupRef.current.setLngLat(e.lngLat).setHTML(html).addTo(map);
       } else {
         map.getCanvas().style.cursor = '';
@@ -414,7 +418,8 @@ export function MapaElectoralLab() {
       (window as any).__candByUbigeo = byUbi;
     }
     (window as any).__ineiToOnpe = ineiToOnpe;
-  }, [candData, ineiToOnpe]);
+    (window as any).__presData = presData;
+  }, [candData, ineiToOnpe, presData]);
 
   // Color districts using in-memory winner map derived from candData.
   useEffect(() => {
@@ -498,37 +503,35 @@ export function MapaElectoralLab() {
       <div style={{ flex: 1, position: 'relative' }}>
         <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
 
-        {/* Breadcrumb */}
+        {/* Breadcrumb · sin card, texto negro */}
         <div style={{
           position: 'absolute', top: 16, left: 16, zIndex: 5,
           display: 'flex', gap: 6, alignItems: 'center',
-          background: 'rgba(255,255,255,.95)', backdropFilter: 'blur(10px)',
-          padding: '10px 16px', borderRadius: 12, boxShadow: '0 4px 20px rgba(15,23,42,.08)',
-          fontSize: 13, fontFamily: 'Montserrat, sans-serif', fontWeight: 700,
+          fontSize: 14, fontFamily: 'Montserrat, sans-serif', fontWeight: 700,
+          color: '#0f172a',
         }}>
           <button
             onClick={goHome}
-            style={{ all: 'unset', cursor: 'pointer', color: '#0891b2', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+            style={{ all: 'unset', cursor: 'pointer', color: '#0f172a', fontWeight: 700 }}
           >
-            <Landmark size={14} strokeWidth={2.2} />
-            <span>Perú</span>
+            Perú
           </button>
           {breadcrumb.map((b, i) => (
             <span key={i} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <ChevronRight size={14} color="#cbd5e1" strokeWidth={2} />
-              <span style={{ color: i === breadcrumb.length - 1 ? '#0f172a' : '#94a3b8' }}>{b}</span>
+              <ChevronRight size={14} color="#0f172a" strokeWidth={2.2} />
+              <span style={{ color: '#0f172a' }}>{b}</span>
             </span>
           ))}
         </div>
 
-        {/* Level badge */}
+        {/* Level badge · negro sobre blanco */}
         <div style={{
           position: 'absolute', top: 16, right: 396, zIndex: 5,
-          background: level === 'departamentos' ? '#0891b2' : level === 'provincias' ? '#7c3aed' : '#059669',
-          color: '#fff', padding: '6px 14px', borderRadius: 8,
+          background: '#fff', color: '#0f172a',
+          padding: '6px 14px', borderRadius: 8,
           fontSize: 10.5, letterSpacing: 1.5, fontWeight: 800, fontFamily: 'JetBrains Mono, monospace',
-          transition: 'background .3s',
           display: 'inline-flex', alignItems: 'center', gap: 7,
+          boxShadow: '0 2px 8px rgba(15,23,42,.08)',
         }}>
           {level === 'departamentos' ? <MapIcon size={13} strokeWidth={2.4} /> : level === 'provincias' ? <MapPin size={13} strokeWidth={2.4} /> : <Building2 size={13} strokeWidth={2.4} />}
           <span>{level === 'departamentos' ? 'DEPARTAMENTOS' : level === 'provincias' ? 'PROVINCIAS' : 'DISTRITOS'}</span>
@@ -667,6 +670,71 @@ export function MapaElectoralLab() {
             Sin datos para esta zona.
           </div>
         )}
+
+        {/* DISTRIBUTION BAR · bottom */}
+        {(() => {
+          const ranked = selected && selected.results.length >= 2
+            ? selected.results.slice()
+            : CAND_KEYS.map(k => ({
+                key: k,
+                name: CAND_NAMES[k],
+                party: CAND_PARTIES[k],
+                color: CAND_COLORS[k],
+                pct: presData?.projection?.[k] ?? 0,
+              })).sort((a, b) => b.pct - a.pct);
+          if (ranked.length < 2 || !ranked[0].pct) return null;
+          const a = ranked[0];
+          const b = ranked[1];
+          const otherPct = ranked.slice(2).reduce((s, x) => s + x.pct, 0);
+          const total = a.pct + b.pct + otherPct || 1;
+          const wA = (a.pct / total) * 100;
+          const wO = (otherPct / total) * 100;
+          const wB = (b.pct / total) * 100;
+          const shortA = a.name.split(' ').slice(-2, -1)[0] || a.name.split(' ').pop() || '?';
+          const shortB = b.name.split(' ').slice(-2, -1)[0] || b.name.split(' ').pop() || '?';
+          return (
+            <div style={{ marginTop: 22, paddingTop: 16, borderTop: '1px solid rgba(15,23,42,.06)' }}>
+              <div style={{ fontSize: 10, letterSpacing: 1.4, fontWeight: 700, color: '#64748b', fontFamily: 'JetBrains Mono, monospace', marginBottom: 12 }}>
+                DISTRIBUCIÓN
+              </div>
+
+              {/* Cabeceras: foto + nombre a los laterales, "Otros" al centro */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, gap: 8 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                  <CandidatePhoto dni={CAND_DNI[a.key]} nombre={a.name} color={a.color} size={32} ring={false} />
+                  <div style={{ minWidth: 0, overflow: 'hidden' }}>
+                    <div style={{ fontSize: 12, fontWeight: 800, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{shortA}</div>
+                    <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11, fontWeight: 700, color: a.color }}>{a.pct.toFixed(2)}%</div>
+                  </div>
+                </div>
+                {otherPct > 0 && (
+                  <div style={{ textAlign: 'center', flexShrink: 0 }}>
+                    <div style={{ fontSize: 9.5, letterSpacing: 1.2, fontWeight: 700, color: '#94a3b8', fontFamily: 'JetBrains Mono, monospace' }}>OTROS</div>
+                    <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11, fontWeight: 700, color: '#64748b' }}>{otherPct.toFixed(2)}%</div>
+                  </div>
+                )}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, justifyContent: 'flex-end' }}>
+                  <div style={{ textAlign: 'right', minWidth: 0, overflow: 'hidden' }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{shortB}</div>
+                    <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 11, fontWeight: 700, color: b.color }}>{b.pct.toFixed(2)}%</div>
+                  </div>
+                  <CandidatePhoto dni={CAND_DNI[b.key]} nombre={b.name} color={b.color} size={32} ring={false} />
+                </div>
+              </div>
+
+              {/* Barra 100% con 3 segmentos */}
+              <div style={{ display: 'flex', height: 14, borderRadius: 8, overflow: 'hidden', background: '#f1f5f9', boxShadow: 'inset 0 1px 2px rgba(15,23,42,.04)' }}>
+                <div style={{ width: `${wA}%`, background: a.color, transition: 'width .6s ease' }} />
+                <div style={{ width: `${wO}%`, background: 'repeating-linear-gradient(45deg, #cbd5e1, #cbd5e1 4px, #e2e8f0 4px, #e2e8f0 8px)', transition: 'width .6s ease' }} />
+                <div style={{ width: `${wB}%`, background: b.color, transition: 'width .6s ease' }} />
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: 10, color: '#94a3b8', fontFamily: 'JetBrains Mono, monospace' }}>
+                <span>{wA.toFixed(0)}%</span>
+                <span>{wB.toFixed(0)}%</span>
+              </div>
+            </div>
+          );
+        })()}
       </div>
 
       <style>{`
