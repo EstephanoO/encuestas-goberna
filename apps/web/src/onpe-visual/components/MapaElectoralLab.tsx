@@ -557,9 +557,7 @@ export function MapaElectoralLab() {
         padding: '20px 22px', overflowY: 'auto', flexShrink: 0,
         transition: 'all .3s',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-          <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#059669', animation: 'pulse 2s infinite' }} />
-          <span style={{ fontSize: 10, letterSpacing: 2, fontWeight: 800, color: '#059669', fontFamily: 'JetBrains Mono, monospace' }}>EN VIVO</span>
+        <div style={{ display: 'flex', alignItems: 'center', marginBottom: 16 }}>
           <span style={{ fontSize: 10, color: '#94a3b8', fontFamily: 'JetBrains Mono, monospace', marginLeft: 'auto' }}>
             {presData?.pctActas?.toFixed(2) ?? '—'}% actas
           </span>

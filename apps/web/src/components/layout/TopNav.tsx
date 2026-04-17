@@ -21,7 +21,7 @@ export function TopNav() {
   const onDashboard = pathname.startsWith('/resultados-2026');
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur">
+    <header className="sticky top-0 z-50 bg-background/95 shadow-[0_1px_3px_rgba(15,23,42,0.06),0_0_12px_rgba(15,23,42,0.04)] backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
         <Link to="/" className="flex items-center gap-2">
           <img
