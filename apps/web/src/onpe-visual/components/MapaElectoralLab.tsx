@@ -18,11 +18,31 @@ const CAND_PARTIES: Record<string, string> = {
 const CAND_DNI: Record<string, string> = {
   fujimori: '10001088', rla: '07845838', sanchez: '16002918', nieto: '06506278', belmont: '09177250',
 };
-// Partido cod → candidate key
+// Partido cod → candidate key (SOLO para los 5 trackeados; ojo: cod=14 es OBRAS, no belmont).
 const PARTIDO_TO_CAND: Record<string, string> = {
-  '8': 'fujimori', '35': 'rla', '10': 'sanchez', '16': 'nieto', '14': 'belmont', '23': 'belmont',
+  '8': 'fujimori', '35': 'rla', '10': 'sanchez', '16': 'nieto', '23': 'belmont',
 };
 const CAND_KEYS = ['fujimori', 'rla', 'sanchez', 'nieto', 'belmont'];
+
+// Colores por código ONPE del partido — cubre los 5 trackeados + partidos menores que ganan
+// algún distrito en el conteo actual. Permite pintar la geometría real sin caer a default gris.
+const PARTY_COLORS: Record<string, string> = {
+  '8':  '#EF6C00', // Fuerza Popular
+  '35': '#0097A7', // Renovación Popular
+  '10': '#C62828', // Juntos por el Perú
+  '16': '#FF8F00', // Partido del Buen Gobierno
+  '23': '#00838F', // País para Todos
+  '2':  '#6D28D9', // Ahora Nación
+  '14': '#0284C7', // Partido Cívico Obras
+  '1':  '#15803D', // Alianza para el Progreso
+  '3':  '#BE123C', // Alianza Electoral Venceremos
+  '20': '#CA8A04', // Somos Perú
+  '25': '#475569', // Cooperación Popular
+  '29': '#7F1D1D', // Perú Primero
+  '37': '#9333EA', // Un Camino Diferente
+  '80': '#94A3B8', // Votos en Blanco
+};
+const FALLBACK_PARTY_COLOR = '#64748B';
 
 // INEI department codes (what the tiles use) — NOT ONPE codes
 const DEPT_CODES: Record<string, string> = {
@@ -119,20 +139,19 @@ export function MapaElectoralLab() {
     for (const d of candData.distritos) {
       const cod = d.ganador?.cod;
       if (!cod) continue;
-      const candKey = PARTIDO_TO_CAND[String(Number(cod))];
-      if (!candKey) continue;
-      const color = CAND_COLORS[candKey];
+      const codKey = String(Number(cod));
+      const color = PARTY_COLORS[codKey] || FALLBACK_PARTY_COLOR;
       const ubi = String(d.ubigeo ?? '').padStart(6, '0');
       if (ubi.length !== 6) continue;
       distColors[ubi] = color;
       const pcode = ubi.slice(0, 4);
       if (!provCounts[pcode]) provCounts[pcode] = {};
-      provCounts[pcode][candKey] = (provCounts[pcode][candKey] || 0) + 1;
+      provCounts[pcode][codKey] = (provCounts[pcode][codKey] || 0) + 1;
     }
     const provColors: Record<string, string> = {};
     for (const [pcode, counts] of Object.entries(provCounts)) {
-      const top = Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0];
-      provColors[pcode] = CAND_COLORS[top];
+      const topCod = Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0];
+      provColors[pcode] = PARTY_COLORS[topCod] || FALLBACK_PARTY_COLOR;
     }
     const buildExpr = (obj: Record<string, string>, keyExpr: any, fallback: string) => {
       const entries = Object.entries(obj);
@@ -252,10 +271,10 @@ export function MapaElectoralLab() {
           const cd = (window as any).__candByUbigeo?.[onpeUbi];
           if (cd?.top3?.length) {
             const rows = cd.top3.map((t: any) => {
-              const candKey = PARTIDO_TO_CAND[String(Number(t.cod))] || '';
+              const codKey = String(Number(t.cod));
               return {
                 name: t.cand || t.partido || '?',
-                color: candKey ? CAND_COLORS[candKey] : '#94a3b8',
+                color: PARTY_COLORS[codKey] || FALLBACK_PARTY_COLOR,
                 pct: t.pct ?? 0,
                 votos: t.votos,
               };
@@ -320,10 +339,11 @@ export function MapaElectoralLab() {
         const cd = (window as any).__candByUbigeo?.[onpeUbi];
         if (cd?.top3?.length) {
           const results = cd.top3.map((t: any) => {
-            const candKey = PARTIDO_TO_CAND[String(Number(t.cod))] || '';
+            const codKey = String(Number(t.cod));
+            const candKey = PARTIDO_TO_CAND[codKey] || '';
             return {
-              key: candKey || t.cod, name: t.cand || t.partido || '?',
-              party: t.partido || '', color: candKey ? CAND_COLORS[candKey] : '#94a3b8',
+              key: candKey || codKey, name: t.cand || t.partido || '?',
+              party: t.partido || '', color: PARTY_COLORS[codKey] || FALLBACK_PARTY_COLOR,
               pct: t.pct ?? 0,
             };
           });
