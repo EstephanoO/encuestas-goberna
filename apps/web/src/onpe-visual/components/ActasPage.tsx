@@ -511,14 +511,13 @@ export function ActasPage() {
           cola: d.faltantes ?? 0,
           total: (d.enviadasJee ?? 0) + (d.faltantes ?? 0),
           contado: d.pct ?? 0,
-          participacion: d.participacion ?? (c?.participacion ?? 0),
+          participacion: d.participacion ?? c?.participacion ?? null,
           margen: c?.margen ?? null,
           ganColor: c?.ganador ? colorParty(c.ganador.cod) : null,
         });
       }
     };
-    if (map.isStyleLoaded() && map.getSource('distritos')) apply();
-    else map.once('idle', apply);
+    whenSourceLoaded(map, 'distritos', apply);
   }, [snap, candSnap, dataByUbigeo, candByUbigeo]);
 
   // ── Cambia el fill-color según la métrica seleccionada
@@ -527,7 +526,7 @@ export function ActasPage() {
     if (!map) return;
     const expr = paintExprFor(metric);
     const apply = () => { if (map.getLayer('dist-fill')) map.setPaintProperty('dist-fill', 'fill-color', expr); };
-    if (map.isStyleLoaded()) apply(); else map.once('idle', apply);
+    whenMapLoaded(map, apply);
   }, [metric]);
 
   // ── Búsqueda highlight + selección
@@ -556,8 +555,7 @@ export function ActasPage() {
         (window as any).__prevHL = new Set<string>();
       }
     };
-    if (map.isStyleLoaded() && map.getSource('distritos')) apply();
-    else map.once('idle', apply);
+    whenSourceLoaded(map, 'distritos', apply);
   }, [q, filtered, snap]);
 
   // ── Selección múltiple (ubigeos)
@@ -936,6 +934,28 @@ function SimPanel({ selSet, candByUbigeo, dataByUbigeo, simAlloc, onSimAlloc, on
       )}
     </div>
   );
+}
+
+// Espera a que el mapa haya terminado su load inicial antes de ejecutar el callback.
+// Evita la trampa de `once('idle')` cuando el mapa ya está idle y no vuelve a dispararlo.
+function whenMapLoaded(map: MLMap, cb: () => void) {
+  if (map.loaded()) { cb(); return; }
+  map.once('load', cb);
+}
+
+// Espera a que un source específico termine de cargar sus features.
+// Reemplaza el patrón frágil `isStyleLoaded() && getSource(id)` que no garantiza
+// que el GeoJSON haya sido parseado.
+function whenSourceLoaded(map: MLMap, sourceId: string, cb: () => void) {
+  const ready = () => map.isStyleLoaded() && !!map.getSource(sourceId) && map.isSourceLoaded(sourceId);
+  if (ready()) { cb(); return; }
+  const handler = (e: any) => {
+    if (e.sourceId !== sourceId) return;
+    if (!ready()) return;
+    map.off('sourcedata', handler);
+    cb();
+  };
+  map.on('sourcedata', handler);
 }
 
 // Centroide aproximado de una feature Polygon/MultiPolygon

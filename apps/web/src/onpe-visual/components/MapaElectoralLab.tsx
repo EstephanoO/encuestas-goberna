@@ -53,6 +53,38 @@ const DEPT_CODES: Record<string, string> = {
   'Puno':'21','San Martín':'22','Tacna':'23','Tumbes':'24','Ucayali':'25',
 };
 
+// ONPE usa códigos de depto DISTINTOS a INEI (ordenados alfabéticamente con Callao al final).
+// El tile del Lab usa INEI → necesitamos traducir ubigeos ONPE → INEI antes de matchear.
+const ONPE_TO_INEI_DEPT: Record<string, string> = {
+  '01':'01', '02':'02', '03':'03', '04':'04', '05':'05', '06':'06',
+  '07':'08', // Cusco
+  '08':'09', // Huancavelica
+  '09':'10', // Huánuco
+  '10':'11', // Ica
+  '11':'12', // Junín
+  '12':'13', // La Libertad
+  '13':'14', // Lambayeque
+  '14':'15', // Lima
+  '15':'16', // Loreto
+  '16':'17', // Madre de Dios
+  '17':'18', // Moquegua
+  '18':'19', // Pasco
+  '19':'20', // Piura
+  '20':'21', // Puno
+  '21':'22', // San Martín
+  '22':'23', // Tacna
+  '23':'24', // Tumbes
+  '24':'07', // Callao
+  '25':'25', // Ucayali
+};
+
+function onpeToIneiUbigeo(onpeUbi: string): string {
+  const u = String(onpeUbi ?? '').padStart(6, '0');
+  if (u.length !== 6) return u;
+  const inei = ONPE_TO_INEI_DEPT[u.slice(0, 2)];
+  return inei ? inei + u.slice(2) : u;
+}
+
 function fmtVotos(v?: number) {
   if (!v || v <= 0) return '—';
   if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(2)}M`;
@@ -135,22 +167,39 @@ export function MapaElectoralLab() {
       return { provColorExprFromData: null as any, distColorExprFromData: null as any };
     }
     const distColors: Record<string, string> = {};
-    const provCounts: Record<string, Record<string, number>> = {};
+    // Sumamos VOTOS por partido y por provincia (no sólo cuento distritos ganados).
+    // Así el color de la provincia refleja al ganador real por suma de votos de toda la provincia.
+    const provVotes: Record<string, Record<string, number>> = {};
     for (const d of candData.distritos) {
-      const cod = d.ganador?.cod;
-      if (!cod) continue;
-      const codKey = String(Number(cod));
-      const color = PARTY_COLORS[codKey] || FALLBACK_PARTY_COLOR;
-      const ubi = String(d.ubigeo ?? '').padStart(6, '0');
-      if (ubi.length !== 6) continue;
-      distColors[ubi] = color;
-      const pcode = ubi.slice(0, 4);
-      if (!provCounts[pcode]) provCounts[pcode] = {};
-      provCounts[pcode][codKey] = (provCounts[pcode][codKey] || 0) + 1;
+      // Traducir ubigeo ONPE → INEI (el tile usa INEI).
+      const ineiUbi = onpeToIneiUbigeo(String(d.ubigeo ?? ''));
+      if (ineiUbi.length !== 6) continue;
+      // Distrito: ganador directo del distrito.
+      const distCod = d.ganador?.cod;
+      if (distCod) {
+        const codKey = String(Number(distCod));
+        distColors[ineiUbi] = PARTY_COLORS[codKey] || FALLBACK_PARTY_COLOR;
+      }
+      // Provincia: acumular votos por partido usando top3 (contiene votos absolutos por cand).
+      const pcode = ineiUbi.slice(0, 4);
+      if (!provVotes[pcode]) provVotes[pcode] = {};
+      const top3 = Array.isArray(d.top3) ? d.top3 : [];
+      for (const t of top3) {
+        if (!t?.cod) continue;
+        const k = String(Number(t.cod));
+        provVotes[pcode][k] = (provVotes[pcode][k] || 0) + (t.votos || 0);
+      }
+      // Si no hay top3 pero sí ganador, al menos cuenta su contribución (mínima).
+      if (!top3.length && distCod) {
+        const k = String(Number(distCod));
+        provVotes[pcode][k] = (provVotes[pcode][k] || 0) + (d.ganador?.votos || 0);
+      }
     }
     const provColors: Record<string, string> = {};
-    for (const [pcode, counts] of Object.entries(provCounts)) {
-      const topCod = Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0];
+    for (const [pcode, votes] of Object.entries(provVotes)) {
+      const entries = Object.entries(votes).sort((a, b) => b[1] - a[1]);
+      if (!entries.length) continue;
+      const topCod = entries[0][0];
       provColors[pcode] = PARTY_COLORS[topCod] || FALLBACK_PARTY_COLOR;
     }
     const buildExpr = (obj: Record<string, string>, keyExpr: any, fallback: string) => {
@@ -430,14 +479,19 @@ export function MapaElectoralLab() {
     else map.once('load', () => { apply(); map.once('idle', apply); });
   }, [provColorExprFromData, deptColorExpr]);
 
-  // Expose candData + INEI→ONPE mapping for popup/click handlers
+  // Expose candData indexed por ubigeo INEI (lo que devuelve el tile).
+  // candData viene con ubigeo ONPE; traducimos para que el lookup con la key del tile sea directo.
   useEffect(() => {
     if (candData?.distritos) {
       const byUbi: Record<string, any> = {};
-      for (const d of candData.distritos) byUbi[d.ubigeo] = d;
+      for (const d of candData.distritos) {
+        const inei = onpeToIneiUbigeo(String(d.ubigeo ?? ''));
+        if (inei.length === 6) byUbi[inei] = d;
+      }
       (window as any).__candByUbigeo = byUbi;
     }
-    (window as any).__ineiToOnpe = ineiToOnpe;
+    // Mantengo __ineiToOnpe como identidad (el override del VPS puede reintroducir casos puntuales).
+    (window as any).__ineiToOnpe = ineiToOnpe || {};
     (window as any).__presData = presData;
   }, [candData, ineiToOnpe, presData]);
 
