@@ -63,34 +63,42 @@ export async function loadSenado(): Promise<SenadoData | null> {
 // Colores por partido — ajustados a la identidad visual real de cada partido
 // (según sus logos y campañas oficiales). Fallback a gris.
 export const PARTY_COLORS: Record<string, string> = {
-  '8':  '#F58220',  // FUERZA POPULAR        · naranja fuerte (logo K naranja)
-  '35': '#12B3CC',  // RENOVACIÓN POPULAR    · celeste turquesa (marca RP)
-  '16': '#F5B300',  // PARTIDO DEL BUEN GOBIERNO · dorado/amarillo-naranja
-  '10': '#E30613',  // JUNTOS POR EL PERÚ    · rojo intenso (JP logo)
-  '2':  '#800020',  // AHORA NACIÓN          · bordó/vinotinto
-  '14': '#F4C300',  // PARTIDO CÍVICO OBRAS  · amarillo oro
-  '23': '#FF6B00',  // PAÍS PARA TODOS       · naranja vibrante
-  '33': '#138A3E',  // PRIMERO LA GENTE      · verde
-  '28': '#D63D2B',  // PERÚ ACCIÓN           · rojo
-  '26': '#0A65A7',  // INTEGRIDAD DEMOCRÁTICA · azul institucional
-  '30': '#7A1F3D',  // PRIN                  · guinda
-  '36': '#1F6FB5',  // SALVEMOS AL PERÚ      · azul
-  '31': '#B91F52',  // PARTIDO APRISTA PERUANO · rojo aprista
-  '11': '#FFD100',  // PODEMOS PERÚ          · amarillo
-  '7':  '#004F9F',  // PARTIDO MORADO        · morado (usamos azul profundo de su logo)
-  '5':  '#4A9E3C',  // FE EN EL PERÚ         · verde
-  '9':  '#1E4D8C',  // FUERZA Y LIBERTAD     · azul marino
-  '18': '#3EA652',  // PARTIDO DEMÓCRATA VERDE · verde
-  '19': '#F5C400',  // PARTIDO DEMOCRÁTICO FEDERAL · amarillo
-  '15': '#C8161D',  // PTE - PERÚ (Trabajadores) · rojo
-  '20': '#0B5FA4',  // AVANZA PAÍS           · azul
-  '25': '#74B859',  // PARTIDO DEMÓCRATA UNIDO · verde
-  '27': '#2A4B92',  // COOPERACIÓN POPULAR   · azul cooperación
-  '29': '#2EA55F',  // PROGRESEMOS           · verde
-  '32': '#4F5DB3',  // ALIANZA PARA EL PROGRESO · celeste APP
-  '34': '#8D1E39',  // UNIDAD NACIONAL       · guinda
-  '17': '#006BA6',  // PERÚ PRIMERO          · azul
-  '37': '#BC1F5D',  // UN CAMINO DIFERENTE   · rosa
+  '1':  '#1565C0',  // ALIANZA PARA EL PROGRESO (APP) · azul fuerte
+  '2':  '#6A1B9A',  // AHORA NACIÓN          · púrpura intenso
+  '3':  '#4A148C',  // ALIANZA ELECTORAL VENCEREMOS · violeta
+  '5':  '#2E7D32',  // FE EN EL PERÚ         · verde
+  '6':  '#1B5E20',  // FRENTE POPULAR AGRÍCOLA · verde oscuro
+  '7':  '#7B1FA2',  // PARTIDO MORADO        · morado
+  '8':  '#EF6C00',  // FUERZA POPULAR        · naranja (marca Keiko)
+  '9':  '#0D47A1',  // FUERZA Y LIBERTAD     · azul marino
+  '10': '#C62828',  // JUNTOS POR EL PERÚ    · rojo carmesí
+  '11': '#F9A825',  // LIBERTAD POPULAR      · amarillo
+  '12': '#B71C1C',  // PARTIDO APRISTA PERUANO · rojo oscuro
+  '14': '#33691E',  // PARTIDO CÍVICO OBRAS  · verde oliva (antes dorado, confundía con FP)
+  '15': '#D32F2F',  // PTE - PERÚ            · rojo
+  '16': '#FF8F00',  // PARTIDO DEL BUEN GOBIERNO · ámbar
+  '17': '#0277BD',  // PERÚ PRIMERO          · azul
+  '18': '#388E3C',  // PARTIDO DEMÓCRATA VERDE · verde
+  '19': '#FBC02D',  // PARTIDO DEMOCRÁTICO FEDERAL · amarillo
+  '20': '#AD1457',  // SOMOS PERÚ            · magenta fuerte
+  '21': '#6A1B9A',  // FRENTE DE LA ESPERANZA · violeta
+  '22': '#7B1FA2',  // PARTIDO MORADO        · morado
+  '23': '#00838F',  // PAÍS PARA TODOS       · teal (antes naranja, confundía con FP)
+  '24': '#4A148C',  // PARTIDO PATRIÓTICO    · violeta
+  '25': '#283593',  // COOPERACIÓN POPULAR   · azul índigo
+  '26': '#01579B',  // INTEGRIDAD DEMOCRÁTICA · azul
+  '27': '#558B2F',  // PARTIDO DEMÓCRATA UNIDO · verde lima
+  '28': '#E53935',  // PERÚ ACCIÓN           · rojo
+  '29': '#00695C',  // PROGRESEMOS           · teal oscuro
+  '30': '#880E4F',  // PRIN                  · guinda
+  '31': '#37474F',  // PARTIDO SICREO        · gris azulado
+  '32': '#F57F17',  // PODEMOS PERÚ          · amarillo-naranja
+  '33': '#2E7D32',  // PRIMERO LA GENTE      · verde
+  '34': '#880E4F',  // UNIDAD NACIONAL       · guinda
+  '35': '#0097A7',  // RENOVACIÓN POPULAR    · cian (marca RLA)
+  '36': '#1976D2',  // SALVEMOS AL PERÚ      · azul
+  '37': '#C2185B',  // UN CAMINO DIFERENTE   · rosa fuerte
+  '38': '#455A64',  // fallback
 };
 
 /** Normaliza códigos padded "00000035" → "35" para hacer match con PARTY_COLORS. */

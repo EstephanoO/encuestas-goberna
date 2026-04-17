@@ -1,5 +1,6 @@
 import { useState } from 'react';
 
+const LOCAL_PHOTO = (dni: string) => `/fotos/${dni}.jpg`;
 const ONPE_PHOTO = (dni: string) => `https://resultadoelectoral.onpe.gob.pe/assets/img-reales/candidatos/${dni}.jpg`;
 
 interface Props {
@@ -37,9 +38,16 @@ export function CandidatePhoto({ dni, nombre, color, size = 48, ring = true }: P
     return (
       <div style={common}>
         <img
-          src={ONPE_PHOTO(dni)}
+          src={LOCAL_PHOTO(dni)}
           alt={nombre || ''}
-          onError={() => setBroken(true)}
+          onError={(e) => {
+            const img = e.currentTarget;
+            if (img.src.includes('/fotos/')) {
+              img.src = ONPE_PHOTO(dni);
+            } else {
+              setBroken(true);
+            }
+          }}
           style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
           loading="lazy"
         />
@@ -47,13 +55,14 @@ export function CandidatePhoto({ dni, nombre, color, size = 48, ring = true }: P
     );
   }
   return (
-    <div style={common}>
+    <div style={{...common, background: `linear-gradient(135deg, ${color}, ${color}cc)`}}>
       <span style={{
-        fontFamily: 'JetBrains Mono, monospace',
-        fontWeight: 600,
-        fontSize: Math.max(10, Math.round(size * 0.33)),
+        fontFamily: 'Montserrat, Inter, sans-serif',
+        fontWeight: 800,
+        fontSize: Math.max(11, Math.round(size * 0.36)),
         color: '#fff',
-        letterSpacing: '-0.5px',
+        letterSpacing: '0.5px',
+        textShadow: '0 1px 2px rgba(0,0,0,.15)',
       }}>{initials}</span>
     </div>
   );

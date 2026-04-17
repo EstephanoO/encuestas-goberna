@@ -13,6 +13,8 @@ import { CriticalGap } from './components/CriticalGap';
 import { SenadoPage } from './components/SenadoPage';
 import { DiputadosPage } from './components/DiputadosPage';
 import { AndinoPage } from './components/AndinoPage';
+import { ActasPage } from './components/ActasPage';
+import { MapaElectoralLab } from './components/MapaElectoralLab';
 import { InsightsRow } from './components/InsightsRow';
 import { ParticipacionCard } from './components/ParticipacionCard';
 import { MOCK_ONPE, MOCK_DATUM } from './data/mock';
@@ -30,12 +32,14 @@ const PARTY_MAP: Record<CandKey, { party: string; initials: string }> = {
   belmont:  { party: 'País para Todos',     initials: 'RB'  },
 };
 
-type View = 'presidencial' | 'senado' | 'diputados' | 'andino';
+type View = 'presidencial' | 'senado' | 'diputados' | 'andino' | 'actas' | 'lab';
 
 function viewFromHash(h: string): View {
   if (h === '#senado') return 'senado';
   if (h === '#diputados') return 'diputados';
   if (h === '#andino') return 'andino';
+  if (h === '#actas') return 'actas';
+  if (h === '#lab') return 'lab';
   return 'presidencial';
 }
 
@@ -113,6 +117,8 @@ function App() {
   if (view === 'senado') return <SenadoPage />;
   if (view === 'diputados') return <DiputadosPage />;
   if (view === 'andino') return <AndinoPage />;
+  if (view === 'actas') return <ActasPage />;
+  if (view === 'lab') return <MapaElectoralLab />;
 
   return (
     <>

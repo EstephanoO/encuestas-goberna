@@ -12,10 +12,57 @@
     <link rel="preload" as="image" href="/hero-bg.webp" fetchpriority="high" />
     <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" onload="this.onload=null;this.rel='stylesheet'" />
     <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" /></noscript>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&family=Playfair+Display:wght@700;900&family=Inter:wght@300;400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pontano+Sans:wght@300;400;500;600;700&family=Montserrat:wght@400;600;700;800&family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&family=Playfair+Display:wght@700;900&family=Inter:wght@300;400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" />
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <script>
+    // ── tracker ligero: pageview con duración + clicks (envía a /admin/beacon)
+    (function(){
+      var ENDPOINT = '/admin/beacon';
+      var path = location.pathname + location.hash;
+      var startedAt = Date.now();
+      function send(obj){
+        try {
+          var body = JSON.stringify(Object.assign({path: path, ref: document.referrer || ''}, obj));
+          if (navigator.sendBeacon) navigator.sendBeacon(ENDPOINT, new Blob([body], {type:'application/json'}));
+          else fetch(ENDPOINT, {method:'POST', keepalive:true, headers:{'Content-Type':'application/json'}, body: body}).catch(function(){});
+        } catch(e){}
+      }
+      function flushPageview(){
+        var d = Math.round((Date.now() - startedAt) / 1000);
+        if (d < 1) return;
+        send({type:'pageview', duration: d});
+      }
+      // Pageview al cambiar de ruta (SPA: history pushState + hashchange)
+      function onRouteChange(){
+        flushPageview();
+        path = location.pathname + location.hash;
+        startedAt = Date.now();
+        send({type:'route', duration: 0});
+      }
+      var _push = history.pushState;
+      history.pushState = function(){ _push.apply(this, arguments); onRouteChange(); };
+      var _rep = history.replaceState;
+      history.replaceState = function(){ _rep.apply(this, arguments); onRouteChange(); };
+      addEventListener('popstate', onRouteChange);
+      addEventListener('hashchange', onRouteChange);
+      // Unload / visibilitychange
+      addEventListener('visibilitychange', function(){ if (document.visibilityState === 'hidden') flushPageview(); });
+      addEventListener('pagehide', flushPageview);
+      addEventListener('beforeunload', flushPageview);
+      // Clicks (con texto de elemento y selector simple)
+      addEventListener('click', function(e){
+        var t = e.target;
+        if (!t || !(t instanceof Element)) return;
+        var label = (t.textContent || '').trim().slice(0, 60) || (t.getAttribute('aria-label') || t.getAttribute('title') || '').slice(0, 60);
+        var tag = t.tagName.toLowerCase();
+        var cls = (t.className && typeof t.className === 'string') ? '.' + t.className.split(/\s+/).slice(0, 2).join('.') : '';
+        var sel = tag + cls;
+        send({type:'click', target: (label || sel).slice(0, 60), sel: sel, x: e.clientX, y: e.clientY});
+      }, {passive: true, capture: true});
+    })();
+    </script>
   </body>
 </html>

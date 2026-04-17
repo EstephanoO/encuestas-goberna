@@ -1,8 +1,20 @@
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap');
+@import 'maplibre-gl/dist/maplibre-gl.css';
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ───────── Tipografía global ───────── */
+html, body {
+  font-family: 'Pontano Sans', 'Inter', -apple-system, system-ui, sans-serif;
+}
+h1, h2, h3, h4, h5, h6,
+.font-title, .hero-title, .card-title, .pulso-title {
+  font-family: 'Montserrat', 'Pontano Sans', sans-serif !important;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
 
 @layer base {
   :root {
@@ -41,10 +53,10 @@
   }
 
   .maplibregl-popup-content {
-    @apply bg-transparent! shadow-none! p-0! rounded-none! border-none!;
+    @apply !bg-transparent !shadow-none !p-0 !rounded-none !border-none;
   }
   .maplibregl-popup-tip {
-    @apply hidden!;
+    @apply !hidden;
   }
   .maplibregl-marker {
     z-index: 10 !important;

@@ -1,8 +1,22 @@
 import { useEffect, useMemo, useState } from 'react';
-import { loadSenado, colorOfPartido, nombreCorto, type SenadoData, type CandidatoSenado } from '../data/senadoSource';
+import { loadSenado, colorOfPartido, nombreCorto, type SenadoData, type CandidatoSenado, type PartidoVotos } from '../data/senadoSource';
 import { Hemicycle, HemicycleLegend, type SeatInfo } from './Hemicycle';
 import { SeatCard } from './SeatCard';
 import { SenadoExplorer } from './SenadoExplorer';
+import { CandidatePhoto } from './CandidatePhoto';
+
+interface CandSearchResult {
+  cand: CandidatoSenado;
+  partido: PartidoVotos;
+  partyColor: string;
+  scope: 'nacional' | string; // 'nacional' o nombre del distrito
+  escanosDeLista: number;      // cuántos escaños tiene la lista
+  rankInList: number;          // posición por voto preferencial (1-based)
+  totalInList: number;         // total candidatos en la lista
+  entra: boolean;              // ¿entra con D'Hondt actual?
+  margen: number;              // votos de ventaja sobre el último que entra (o gap negativo)
+  umbralEntrada: number;       // votos del último que entraría
+}
 
 /** Construye seats con candidato real (nombre + DNI) para el Senado Nacional. */
 function seatsFromPartyMap(escanos: Record<string, number>, partidos: { codigo: string; nombre: string; candidatos?: number | CandidatoSenado[]; pct?: number; votos?: number }[]): SeatInfo[] {
@@ -34,10 +48,52 @@ function seatsFromPartyMap(escanos: Record<string, number>, partidos: { codigo: 
 
 type SubTab = 'nacional' | 'regional';
 
+function buildSearchIndex(data: SenadoData): CandSearchResult[] {
+  const out: CandSearchResult[] = [];
+  // Nacional
+  const n = data.nacional;
+  for (const p of n.partidos) {
+    const cands: CandidatoSenado[] = Array.isArray(p.candidatos) ? p.candidatos : [];
+    const sorted = [...cands].sort((a, b) => b.votosPreferenciales - a.votosPreferenciales);
+    const seats = n.escanos[p.codigo] || 0;
+    sorted.forEach((c, i) => {
+      const umbral = seats > 0 && sorted[seats - 1] ? sorted[seats - 1].votosPreferenciales : 0;
+      out.push({
+        cand: c, partido: p, partyColor: colorOfPartido(p.codigo),
+        scope: 'nacional', escanosDeLista: seats,
+        rankInList: i + 1, totalInList: sorted.length,
+        entra: i < seats, margen: c.votosPreferenciales - umbral,
+        umbralEntrada: umbral,
+      });
+    });
+  }
+  // Regional
+  for (const d of data.regional.distritos) {
+    for (const p of d.partidos) {
+      const cands = p.candidatosList || (Array.isArray(p.candidatos) ? p.candidatos : []);
+      const sorted = [...cands].sort((a, b) => b.votosPreferenciales - a.votosPreferenciales);
+      const seats = d.asignacion?.[p.codigo] || 0;
+      sorted.forEach((c, i) => {
+        const umbral = seats > 0 && sorted[seats - 1] ? sorted[seats - 1].votosPreferenciales : 0;
+        out.push({
+          cand: c, partido: p, partyColor: colorOfPartido(p.codigo),
+          scope: d.nombre, escanosDeLista: seats,
+          rankInList: i + 1, totalInList: sorted.length,
+          entra: i < seats, margen: c.votosPreferenciales - umbral,
+          umbralEntrada: umbral,
+        });
+      });
+    }
+  }
+  return out;
+}
+
 export function SenadoPage() {
   const [data, setData] = useState<SenadoData | null>(null);
   const [sub, setSub] = useState<SubTab>('nacional');
   const [seatSelected, setSeatSelected] = useState<SeatInfo | null>(null);
+  const [searchQ, setSearchQ] = useState('');
+  const [showSearch, setShowSearch] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -49,6 +105,18 @@ export function SenadoPage() {
     const id = setInterval(fetchAll, 60_000);
     return () => { alive = false; clearInterval(id); };
   }, []);
+
+  const searchIndex = useMemo(() => data ? buildSearchIndex(data) : [], [data]);
+  const searchResults = useMemo(() => {
+    if (!searchQ.trim() || searchQ.length < 2) return [];
+    const q = searchQ.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    return searchIndex.filter(r => {
+      const name = r.cand.nombre.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      const scope = r.scope.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      const part = r.partido.nombre.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      return name.includes(q) || scope.includes(q) || part.includes(q);
+    }).sort((a, b) => (b.entra ? 1 : 0) - (a.entra ? 1 : 0) || b.cand.votosPreferenciales - a.cand.votosPreferenciales).slice(0, 30);
+  }, [searchQ, searchIndex]);
 
   if (!data) {
     return (
@@ -65,7 +133,7 @@ export function SenadoPage() {
       <header className="hero">
         <div className="hero-left">
           <div className="hero-title">Senado · Perú 2026</div>
-          <div className="hero-sub">Elección del Congreso Bicameral · Senadores</div>
+          <div className="hero-sub">60 senadores · {data.nacional.escanosTotales} distrito único + 30 distrital múltiple ({data.regional.distritos.length} distritos)</div>
         </div>
         <div className="hero-center">
           <div className="hero-label">ACTAS CONTABILIZADAS</div>
@@ -89,6 +157,47 @@ export function SenadoPage() {
         </button>
       </div>
 
+      {/* BUSCADOR DE CANDIDATO */}
+      <div className="card" style={{ marginBottom: 16, padding: '14px 18px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <span style={{ fontSize: 18 }}>🔍</span>
+          <input
+            value={searchQ} onChange={e => { setSearchQ(e.target.value); setShowSearch(true); }}
+            onFocus={() => setShowSearch(true)}
+            placeholder="Buscar por candidato, distrito o partido… (ej. Lima, Aliaga, Fuerza Popular)"
+            style={{
+              flex: 1, padding: '10px 14px', fontSize: 14, background: 'var(--bg-alt)', color: 'var(--tx1)',
+              border: '1px solid var(--border)', borderRadius: 8, fontFamily: 'Pontano Sans, Inter, sans-serif', outline: 'none',
+            }}
+          />
+          {searchQ && <button onClick={() => { setSearchQ(''); setShowSearch(false); }} style={{ all: 'unset', cursor: 'pointer', color: 'var(--tx3)', fontSize: 16 }}>✕</button>}
+        </div>
+
+        {showSearch && searchQ.length >= 2 && (
+          <div style={{ marginTop: 12 }}>
+            {searchResults.length === 0 ? (
+              <div style={{ padding: 16, textAlign: 'center', color: 'var(--tx3)', fontSize: 13 }}>
+                No se encontró "{searchQ}" en los {searchIndex.length} candidatos disponibles.
+                <div style={{ marginTop: 8, fontSize: 11.5, color: 'var(--tx3)' }}>
+                  ONPE expone solo los ~56 candidatos nacionales con más votos preferenciales.
+                  <br />Buscá también por distrito o partido (ej. "Lima", "Fuerza Popular").
+                  <br /><a href="https://resultadoelectoral.onpe.gob.pe/main/senadores-distrito-nacional-unico" target="_blank" rel="noopener" style={{ color: 'var(--c-rla)', textDecoration: 'underline' }}>Ver lista completa en ONPE →</a>
+                </div>
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gap: 8 }}>
+                <div style={{ fontSize: 10.5, color: 'var(--tx3)', letterSpacing: 1.2, fontWeight: 700, fontFamily: 'JetBrains Mono, monospace' }}>
+                  {searchResults.length} RESULTADO{searchResults.length > 1 ? 'S' : ''}
+                </div>
+                {searchResults.map((r, idx) => (
+                  <CandResultCard key={`${r.cand.dni || idx}-${r.scope}`} result={r} pctActas={data!.nacional.pctActas} />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
       {sub === 'nacional' && <NacionalTab data={data} onSeatClick={setSeatSelected} />}
       {sub === 'regional' && <SenadoExplorer data={data} onSeatClick={setSeatSelected} />}
 
@@ -97,10 +206,82 @@ export function SenadoPage() {
   );
 }
 
+function CandResultCard({ result: r, pctActas }: { result: CandSearchResult; pctActas: number }) {
+  const statusColor = r.entra ? '#059669' : r.margen > -500 ? '#d97706' : '#dc2626';
+  const statusLabel = r.entra ? '✓ ENTRA' : r.escanosDeLista === 0 ? '✗ PARTIDO SIN ESCAÑOS' : `✗ FUERA (pos ${r.rankInList}/${r.escanosDeLista})`;
+  const pctContado = pctActas;
+  const proyVotos = pctContado > 10 ? Math.round(r.cand.votosPreferenciales / (pctContado / 100)) : null;
+
+  return (
+    <div style={{
+      display: 'grid', gridTemplateColumns: '44px 1fr auto', gap: 14, alignItems: 'start',
+      padding: '12px 14px', background: 'var(--bg-card)', border: '1px solid var(--border)',
+      borderLeft: `4px solid ${r.partyColor}`, borderRadius: 10,
+    }}>
+      <CandidatePhoto dni={r.cand.dni} nombre={r.cand.nombre} color={r.partyColor} size={44} ring={false} />
+      <div style={{ minWidth: 0 }}>
+        <div style={{ fontSize: 14.5, fontWeight: 700, color: 'var(--tx1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {r.cand.nombre}
+        </div>
+        <div style={{ fontSize: 11.5, color: 'var(--tx2)', marginTop: 2 }}>
+          <span style={{ color: r.partyColor, fontWeight: 600 }}>{nombreCorto(r.partido.nombre)}</span>
+          <span style={{ color: 'var(--tx3)', margin: '0 6px' }}>·</span>
+          <span>{r.scope === 'nacional' ? '🏛 Senado Nacional' : `📍 ${r.scope}`}</span>
+        </div>
+        <div style={{ display: 'flex', gap: 12, marginTop: 8, flexWrap: 'wrap', fontSize: 11.5 }}>
+          <span style={{ fontFamily: 'JetBrains Mono, monospace', fontWeight: 600 }}>
+            {r.cand.votosPreferenciales.toLocaleString('es-PE')} <span style={{ color: 'var(--tx3)', fontWeight: 500 }}>votos pref.</span>
+          </span>
+          <span style={{ fontFamily: 'JetBrains Mono, monospace' }}>
+            #{r.rankInList} <span style={{ color: 'var(--tx3)' }}>de {r.totalInList}</span>
+          </span>
+          <span style={{ fontFamily: 'JetBrains Mono, monospace' }}>
+            {r.escanosDeLista} <span style={{ color: 'var(--tx3)' }}>escaños</span>
+          </span>
+        </div>
+        {/* Barra de progreso hacia el umbral */}
+        {r.escanosDeLista > 0 && r.umbralEntrada > 0 && (
+          <div style={{ marginTop: 8 }}>
+            <div style={{ height: 5, background: 'var(--bg-alt)', borderRadius: 3, overflow: 'hidden' }}>
+              <div style={{
+                height: '100%', borderRadius: 3,
+                width: `${Math.min(100, (r.cand.votosPreferenciales / r.umbralEntrada) * 100)}%`,
+                background: r.entra ? 'linear-gradient(90deg, #059669, #34d399)' : 'linear-gradient(90deg, #dc2626, #f87171)',
+              }} />
+            </div>
+            <div style={{ fontSize: 10, color: 'var(--tx3)', marginTop: 3, fontFamily: 'JetBrains Mono, monospace' }}>
+              umbral: {r.umbralEntrada.toLocaleString('es-PE')} votos
+              {r.entra
+                ? ` · +${r.margen.toLocaleString('es-PE')} de ventaja`
+                : ` · le faltan ${Math.abs(r.margen).toLocaleString('es-PE')}`}
+            </div>
+          </div>
+        )}
+        {/* Proyección al 100% */}
+        {proyVotos && pctContado < 98 && (
+          <div style={{ marginTop: 6, fontSize: 10.5, color: 'var(--tx2)', fontFamily: 'JetBrains Mono, monospace' }}>
+            📊 Al 100% actas: ≈ {proyVotos.toLocaleString('es-PE')} votos pref. (extrapolación lineal)
+          </div>
+        )}
+      </div>
+      <div style={{ textAlign: 'right' }}>
+        <div style={{
+          display: 'inline-block', padding: '4px 10px', borderRadius: 6, fontSize: 10.5,
+          fontWeight: 800, letterSpacing: .8, fontFamily: 'JetBrains Mono, monospace',
+          background: r.entra ? 'rgba(5,150,105,.12)' : r.escanosDeLista === 0 ? 'rgba(148,163,184,.12)' : 'rgba(220,38,38,.12)',
+          color: statusColor,
+        }}>
+          {statusLabel}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function NacionalTab({ data, onSeatClick }: { data: SenadoData; onSeatClick: (s: SeatInfo) => void }) {
   const n = data.nacional;
   const pasaValla = n.partidos.filter(p => p.pct >= n.valla);
-  const maxPct = Math.max(...n.partidos.slice(0, 12).map(p => p.pct), 1);
+  const maxPct = Math.max(...n.partidos.map(p => p.pct), 1);
   const nacSeats = useMemo(() => seatsFromPartyMap(n.escanos, n.partidos), [n]);
 
   return (
@@ -117,8 +298,8 @@ function NacionalTab({ data, onSeatClick }: { data: SenadoData; onSeatClick: (s:
       </div>
 
       <div className="card">
-        <div className="card-title">Ranking nacional</div>
-        <div className="card-sub">Top partidos por votos válidos · con escaños proyectados</div>
+        <div className="card-title">Ranking nacional · Distrito Único</div>
+        <div className="card-sub">Todos los partidos · D'Hondt · valla {n.valla}% · {n.escanosTotales} escaños</div>
         <table className="senado-table">
           <thead>
             <tr>
@@ -130,7 +311,7 @@ function NacionalTab({ data, onSeatClick }: { data: SenadoData; onSeatClick: (s:
             </tr>
           </thead>
           <tbody>
-            {n.partidos.slice(0, 12).map((p, i) => {
+            {n.partidos.map((p, i) => {
               const seats = n.escanos[p.codigo] || 0;
               const dentro = p.pct >= n.valla;
               return (

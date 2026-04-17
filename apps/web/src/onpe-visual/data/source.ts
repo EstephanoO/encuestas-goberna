@@ -14,8 +14,9 @@ const DATUM_URL = '/data/datum.json';
 
 export async function loadData(source: 'onpe' | 'datum'): Promise<DashboardData> {
   if (!USE_FETCH) return source === 'onpe' ? MOCK_ONPE : MOCK_DATUM;
+  // No tenemos datum.json (Datum CR) en producción → usar mock directamente, evita 404 en consola
+  if (source === 'datum') return MOCK_DATUM;
   const base = source === 'onpe' ? ONPE_URL : DATUM_URL;
-  // cache-buster para esquivar CDN + browser cache
   const url = `${base}${base.includes('?') ? '&' : '?'}t=${Date.now()}`;
   try {
     const r = await fetch(url, { cache: 'no-store', headers: { 'cache-control': 'no-cache' } });
@@ -23,7 +24,6 @@ export async function loadData(source: 'onpe' | 'datum'): Promise<DashboardData>
     const json = await r.json();
     return json as DashboardData;
   } catch {
-    // fallback a mock si el JSON aún no existe
     return source === 'onpe' ? MOCK_ONPE : MOCK_DATUM;
   }
 }

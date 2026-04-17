@@ -1,19 +1,19 @@
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { Vote, BarChart2, Users, Globe2 } from 'lucide-react';
+import { Vote, BarChart2, Users, Activity } from 'lucide-react';
 
 interface NavItem {
   hash: string;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
+  live?: boolean;
 }
 
-// Tres entradas del dashboard ONPE — todas viven en /resultados-2026, navegan por hash.
 const NAV: NavItem[] = [
-  { hash: '',           label: 'Presidencial',    icon: BarChart2 },
-  { hash: '#senado',    label: 'Senado',          icon: Vote },
-  { hash: '#diputados', label: 'Diputados',       icon: Users },
-  { hash: '#andino',    label: 'Parlamento Andino', icon: Globe2 },
+  { hash: '',           label: 'Presidencial',  icon: BarChart2 },
+  { hash: '#senado',    label: 'Senado',        icon: Vote },
+  { hash: '#diputados', label: 'Diputados',     icon: Users },
+  { hash: '#actas',     label: 'Pulso en Vivo', icon: Activity, live: true },
 ];
 
 export function TopNav() {
@@ -29,13 +29,13 @@ export function TopNav() {
             alt="Goberna"
             className="h-7 w-7 shrink-0 object-contain"
           />
-          <span className="text-base font-bold text-foreground">
+          <span className="text-base font-bold text-foreground" style={{ fontFamily: 'Montserrat, sans-serif', letterSpacing: 0.3 }}>
             MAPA DE PODER ELECTORAL PERÚ
           </span>
         </Link>
 
         <nav className="flex items-center gap-1">
-          {NAV.map(({ hash: h, label, icon: Icon }) => {
+          {NAV.map(({ hash: h, label, icon: Icon, live }) => {
             const active = onDashboard && (hash || '') === (h || '');
             return (
               <Link
@@ -44,12 +44,24 @@ export function TopNav() {
                 className={cn(
                   'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
                   active
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                    ? live
+                      ? 'bg-red-600 text-white'
+                      : 'bg-primary text-primary-foreground'
+                    : live
+                      ? 'text-red-600 hover:bg-red-50 hover:text-red-700'
+                      : 'text-muted-foreground hover:bg-muted hover:text-foreground',
                 )}
               >
                 <Icon className="h-4 w-4" />
                 <span className="hidden sm:inline">{label}</span>
+                {live && (
+                  <span className={cn(
+                    'relative flex h-1.5 w-1.5 ml-0.5',
+                  )}>
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-500 opacity-75" />
+                    <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-red-500" />
+                  </span>
+                )}
               </Link>
             );
           })}
