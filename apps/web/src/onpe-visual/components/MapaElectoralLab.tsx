@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
+import { Landmark, Map as MapIcon, MapPin, Building2, ArrowLeft, ChevronRight } from 'lucide-react';
 import { CandidatePhoto } from './CandidatePhoto';
 
 const TILE_URL = 'https://encuesta.institutogoberna.com/tiles/{z}/{x}/{y}.pbf';
@@ -32,13 +33,40 @@ const DEPT_CODES: Record<string, string> = {
   'Puno':'21','San Martín':'22','Tacna':'23','Tumbes':'24','Ucayali':'25',
 };
 
-function buildPopupRow(c: { key: string; name: string; color: string; pct: number }) {
+// Row matching sidebar layout: foto + nombre + partido + barra + pct
+function buildPopupRow(
+  c: { key: string; name: string; party?: string; color: string; pct: number },
+  maxPct: number,
+  isFirst: boolean,
+) {
   const dni = CAND_DNI[c.key] || '';
-  const surname = c.name.split(' ').slice(-2, -1)[0] || c.name.split(' ').pop() || '?';
-  return `<div style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:11.5px">
-    ${dni ? `<img src="/fotos/${dni}.jpg" style="width:28px;height:28px;border-radius:50%;object-fit:cover;border:2px solid ${c.color};flex-shrink:0" onerror="this.style.display='none'">` : ''}
-    <span style="font-weight:600;color:#0f172a;flex:1">${surname}</span>
-    <strong style="font-family:'JetBrains Mono',monospace;color:${c.color}">${c.pct.toFixed(2)}%</strong>
+  const width = Math.max(0, Math.min(100, (c.pct / (maxPct || 1)) * 100));
+  const border = isFirst ? 'none' : '1px solid rgba(15,23,42,.05)';
+  const party = c.party || CAND_PARTIES[c.key] || '';
+  return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-top:${border}">
+    ${dni
+      ? `<img src="/fotos/${dni}.jpg" style="width:34px;height:34px;border-radius:50%;object-fit:cover;border:2px solid ${c.color};flex-shrink:0" onerror="this.style.display='none'">`
+      : `<div style="width:34px;height:34px;border-radius:50%;background:${c.color}22;border:2px solid ${c.color};flex-shrink:0"></div>`}
+    <div style="flex:1;min-width:0">
+      <div style="font-size:12.5px;font-weight:700;color:#0f172a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.name}</div>
+      ${party ? `<div style="font-size:10px;color:#94a3b8">${party}</div>` : ''}
+      <div style="height:3px;background:#f1f5f9;border-radius:2px;margin-top:4px;overflow:hidden">
+        <div style="height:100%;width:${width}%;background:${c.color};border-radius:2px"></div>
+      </div>
+    </div>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:12.5px;font-weight:700;color:${c.color};min-width:56px;text-align:right">${c.pct.toFixed(2)}%</div>
+  </div>`;
+}
+
+function buildPopupHeader(name: string, levelLabel: string, pctActas?: number, winner?: { name: string; color: string }) {
+  const surname = winner ? (winner.name.split(' ').slice(-2, -1)[0] || winner.name.split(' ').pop() || '?') : '';
+  return `<div style="padding:2px 0 8px;border-bottom:1px solid rgba(15,23,42,.06);margin-bottom:6px">
+    <div style="font-family:Montserrat,sans-serif;font-weight:800;font-size:15px;color:#0f172a;margin-bottom:2px">${name}</div>
+    <div style="display:flex;align-items:center;gap:8px;font-size:10px;font-family:'JetBrains Mono',monospace;color:#94a3b8">
+      <span style="letter-spacing:1.2px;font-weight:700">${levelLabel.toUpperCase()}</span>
+      ${typeof pctActas === 'number' ? `<span style="color:#cbd5e1">·</span><span>${pctActas.toFixed(1)}% actas</span>` : ''}
+    </div>
+    ${winner ? `<div style="margin-top:6px;display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:999px;background:${winner.color}14;border:1px solid ${winner.color}33"><span style="width:6px;height:6px;border-radius:50%;background:${winner.color}"></span><span style="font-size:9.5px;font-weight:800;letter-spacing:1.2px;font-family:'JetBrains Mono',monospace;color:${winner.color}">GANA ${surname.toUpperCase()}</span></div>` : ''}
   </div>`;
 }
 
@@ -77,6 +105,54 @@ export function MapaElectoralLab() {
       fetch('/inei-to-onpe.json').then(r => r.ok ? r.json() : {}),
     ]).then(([p, c, m]) => { if (p) setPresData(p); if (c) setCandData(c); setIneiToOnpe(m || {}); });
   }, []);
+
+  // Color expressions for provinces + districts derived from candData distritos.
+  // Province winner = candidate with the most distritos ganados within the 4-digit prefix.
+  // Distrito winner = ganador directo del distrito (ubigeo completo).
+  const { provColorExprFromData, distColorExprFromData } = useMemo(() => {
+    if (!candData?.distritos?.length) {
+      return { provColorExprFromData: null as any, distColorExprFromData: null as any };
+    }
+    const distColors: Record<string, string> = {};
+    const provCounts: Record<string, Record<string, number>> = {};
+    for (const d of candData.distritos) {
+      const cod = d.ganador?.cod;
+      if (!cod) continue;
+      const candKey = PARTIDO_TO_CAND[String(Number(cod))];
+      if (!candKey) continue;
+      const color = CAND_COLORS[candKey];
+      const ubi = String(d.ubigeo ?? '').padStart(6, '0');
+      if (ubi.length !== 6) continue;
+      distColors[ubi] = color;
+      const pcode = ubi.slice(0, 4);
+      if (!provCounts[pcode]) provCounts[pcode] = {};
+      provCounts[pcode][candKey] = (provCounts[pcode][candKey] || 0) + 1;
+    }
+    const provColors: Record<string, string> = {};
+    for (const [pcode, counts] of Object.entries(provCounts)) {
+      const top = Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0];
+      provColors[pcode] = CAND_COLORS[top];
+    }
+    const buildExpr = (obj: Record<string, string>, keyExpr: any, fallback: string) => {
+      const entries = Object.entries(obj);
+      if (!entries.length) return null;
+      const expr: any[] = ['match', keyExpr];
+      for (const [k, v] of entries) expr.push(k, v);
+      expr.push(fallback);
+      return expr;
+    };
+    // Tile may expose either `codprov_full` (4-digit INEI) or split `coddep`+`codprov`.
+    // Use coalesce so it works in both cases.
+    const provKey: any = [
+      'coalesce',
+      ['get', 'codprov_full'],
+      ['concat', ['to-string', ['get', 'coddep']], ['to-string', ['get', 'codprov']]],
+    ];
+    return {
+      provColorExprFromData: buildExpr(provColors, provKey, '#cbd5e1'),
+      distColorExprFromData: buildExpr(distColors, ['get', 'ubigeo'], '#bfdbfe'),
+    };
+  }, [candData]);
 
   // Color map + region data by dept
   const { deptColorExpr, regionsByCode } = useMemo(() => {
@@ -152,51 +228,46 @@ export function MapaElectoralLab() {
         const code = p.coddep || '';
         const ubigeo = p.ubigeo || '';
         map.getCanvas().style.cursor = 'pointer';
-        if (!popupRef.current) popupRef.current = new maplibregl.Popup({ closeButton: false, closeOnClick: false, offset: 14, maxWidth: '280px' });
+        if (!popupRef.current) popupRef.current = new maplibregl.Popup({ closeButton: false, closeOnClick: false, offset: 14, maxWidth: '320px' });
 
-        let html = `<div style="font-family:Montserrat,sans-serif;padding:2px 0">`;
-        html += `<div style="font-weight:800;font-size:14px;color:#0f172a;margin-bottom:2px">${name}</div>`;
-        html += `<div style="font-size:10px;color:#94a3b8;margin-bottom:6px;font-family:'JetBrains Mono',monospace">${lv === 'departamentos' ? 'Departamento' : lv === 'provincias' ? 'Provincia' : 'Distrito'}</div>`;
+        const levelLabel = lv === 'departamentos' ? 'Departamento' : lv === 'provincias' ? 'Provincia' : 'Distrito';
+        let body = '';
 
-        // Dept level: use regionsByCode
-        if (lv === 'departamentos' && (window as any).__regionsByCode?.[code]) {
+        if ((lv === 'departamentos' || lv === 'provincias') && (window as any).__regionsByCode?.[code]) {
           const r = (window as any).__regionsByCode[code] as RegionData;
-          html += `<div style="font-size:11px;color:#64748b;margin-bottom:6px">${r.pctActas?.toFixed(1) ?? '—'}% actas</div>`;
-          r.results.slice(0, 3).forEach(c => {
-            html += buildPopupRow(c);
-          });
-        }
-        // Prov level: same dept data (approximate)
-        else if (lv === 'provincias' && (window as any).__regionsByCode?.[code]) {
-          const r = (window as any).__regionsByCode[code] as RegionData;
-          html += `<div style="font-size:10.5px;color:#94a3b8;margin-bottom:6px">Datos a nivel depto (${r.name})</div>`;
-          r.results.slice(0, 3).forEach(c => {
-            html += buildPopupRow(c);
-          });
-        }
-        // Dist level: convert INEI→ONPE ubigeo then lookup candData
-        else if (lv === 'distritos' && (window as any).__candByUbigeo) {
+          const ranked = [...r.results].sort((a, b) => b.pct - a.pct);
+          const winner = ranked[0];
+          const maxPct = winner?.pct || 1;
+          body += buildPopupHeader(name, levelLabel, r.pctActas, winner ? { name: winner.name, color: winner.color } : undefined);
+          ranked.forEach((c, i) => { body += buildPopupRow(c, maxPct, i === 0); });
+        } else if (lv === 'distritos' && (window as any).__candByUbigeo) {
           const onpeUbi = (window as any).__ineiToOnpe?.[ubigeo] || ubigeo;
           const cd = (window as any).__candByUbigeo?.[onpeUbi];
           if (cd?.top3?.length) {
-            cd.top3.forEach((t: any) => {
+            const rows = cd.top3.map((t: any) => {
               const candKey = PARTIDO_TO_CAND[String(Number(t.cod))] || '';
-              const color = candKey ? CAND_COLORS[candKey] : '#94a3b8';
-              const dni = candKey ? CAND_DNI[candKey] : '';
-              const candName = t.cand || t.partido || '?';
-              const surname = candName.split(' ').slice(-2, -1)[0] || candName.split(' ').pop() || '?';
-              html += `<div style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:11.5px">
-                ${dni ? `<img src="/fotos/${dni}.jpg" style="width:26px;height:26px;border-radius:50%;object-fit:cover;border:2px solid ${color};flex-shrink:0" onerror="this.style.display='none'">` : ''}
-                <span style="font-weight:600;color:#0f172a;flex:1">${surname}</span>
-                <strong style="font-family:'JetBrains Mono',monospace;color:${color}">${t.pct?.toFixed(2) ?? '—'}%</strong>
-              </div>`;
-            });
+              return {
+                key: candKey || String(t.cod),
+                name: t.cand || t.partido || '?',
+                party: t.partido || CAND_PARTIES[candKey] || '',
+                color: candKey ? CAND_COLORS[candKey] : '#94a3b8',
+                pct: t.pct ?? 0,
+              };
+            }).sort((a: any, b: any) => b.pct - a.pct);
+            const winner = rows[0];
+            const maxPct = winner?.pct || 1;
+            body += buildPopupHeader(name, levelLabel, cd.pct, winner ? { name: winner.name, color: winner.color } : undefined);
+            rows.forEach((c: any, i: number) => { body += buildPopupRow(c, maxPct, i === 0); });
           } else {
-            html += `<div style="font-size:11px;color:#94a3b8">Sin datos de candidatos</div>`;
+            body += buildPopupHeader(name, levelLabel);
+            body += `<div style="font-size:11px;color:#94a3b8;padding:10px 0;text-align:center">Sin datos de candidatos</div>`;
           }
+        } else {
+          body += buildPopupHeader(name, levelLabel);
+          body += `<div style="font-size:11px;color:#94a3b8;padding:10px 0;text-align:center">Sin datos disponibles</div>`;
         }
 
-        html += `</div>`;
+        const html = `<div style="font-family:Montserrat,sans-serif;min-width:260px">${body}</div>`;
         popupRef.current.setLngLat(e.lngLat).setHTML(html).addTo(map);
       } else {
         map.getCanvas().style.cursor = '';
@@ -323,28 +394,17 @@ export function MapaElectoralLab() {
     else map.once('load', () => map.once('idle', apply));
   }, [deptColorExpr, regionsByCode]);
 
-  // Color provinces by real provincial winner data
+  // Color provinces by aggregated winner from candData (in-memory, no static JSON file needed).
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
-    fetch('/provincia-colors.json').then(r => r.ok ? r.json() : null).then((colors: Record<string, string> | null) => {
-      if (!colors || !Object.keys(colors).length) {
-        // Fallback to dept color
-        if (typeof deptColorExpr !== 'string') {
-          const apply = () => { try { map.setPaintProperty('prov-fill', 'fill-color', deptColorExpr); } catch {} };
-          if (map.isStyleLoaded()) apply(); else map.on('load', apply);
-        }
-        return;
-      }
-      const expr: any[] = ['match', ['get', 'codprov_full']];
-      for (const [code, color] of Object.entries(colors)) { expr.push(code, color); }
-      expr.push('#cbd5e1');
-      provColorExprRef.current = expr;  // cache for restore
-      const apply = () => { try { map.setPaintProperty('prov-fill', 'fill-color', expr); } catch {} };
-      if (map.isStyleLoaded()) { apply(); map.once('idle', apply); }
-      else map.on('load', () => { apply(); map.once('idle', apply); });
-    });
-  }, [deptColorExpr]);
+    const expr = provColorExprFromData ?? (typeof deptColorExpr !== 'string' ? deptColorExpr : null);
+    if (!expr) return;
+    provColorExprRef.current = expr;
+    const apply = () => { try { map.setPaintProperty('prov-fill', 'fill-color', expr); } catch {} };
+    if (map.isStyleLoaded()) { apply(); map.once('idle', apply); }
+    else map.once('load', () => { apply(); map.once('idle', apply); });
+  }, [provColorExprFromData, deptColorExpr]);
 
   // Expose candData + INEI→ONPE mapping for popup/click handlers
   useEffect(() => {
@@ -356,26 +416,17 @@ export function MapaElectoralLab() {
     (window as any).__ineiToOnpe = ineiToOnpe;
   }, [candData, ineiToOnpe]);
 
-  // Color districts using pre-computed INEI→color mapping
+  // Color districts using in-memory winner map derived from candData.
   useEffect(() => {
     const map = mapRef.current;
-    if (!map) return;
-    fetch('/distrito-colors.json').then(r => r.ok ? r.json() : null).then((colors: Record<string, string> | null) => {
-      if (!colors) return;
-      const entries = Object.entries(colors);
-      if (!entries.length) return;
-      // Build match expression on INEI 'ubigeo' from tile
-      const expr: any[] = ['match', ['get', 'ubigeo']];
-      for (const [ubi, color] of entries) { expr.push(ubi, color); }
-      expr.push('#bfdbfe');
-      distColorExprRef.current = expr;  // cache for restore
-      const apply = () => {
-        try { map.setPaintProperty('dist-fill', 'fill-color', expr); } catch(e) { console.warn('dist color:', e); }
-      };
-      if (map.isStyleLoaded()) { apply(); map.once('idle', apply); }
-      else map.on('load', () => { apply(); map.once('idle', apply); });
-    });
-  }, []);
+    if (!map || !distColorExprFromData) return;
+    distColorExprRef.current = distColorExprFromData;
+    const apply = () => {
+      try { map.setPaintProperty('dist-fill', 'fill-color', distColorExprFromData); } catch (e) { console.warn('dist color:', e); }
+    };
+    if (map.isStyleLoaded()) { apply(); map.once('idle', apply); }
+    else map.once('load', () => { apply(); map.once('idle', apply); });
+  }, [distColorExprFromData]);
 
   // Restore ALL paint properties to their data-driven originals
   const restoreAllColors = useCallback((map: maplibregl.Map) => {
@@ -455,10 +506,16 @@ export function MapaElectoralLab() {
           padding: '10px 16px', borderRadius: 12, boxShadow: '0 4px 20px rgba(15,23,42,.08)',
           fontSize: 13, fontFamily: 'Montserrat, sans-serif', fontWeight: 700,
         }}>
-          <button onClick={goHome} style={{ all: 'unset', cursor: 'pointer', color: '#0891b2' }}>🇵🇪 Perú</button>
+          <button
+            onClick={goHome}
+            style={{ all: 'unset', cursor: 'pointer', color: '#0891b2', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+          >
+            <Landmark size={14} strokeWidth={2.2} />
+            <span>Perú</span>
+          </button>
           {breadcrumb.map((b, i) => (
             <span key={i} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ color: '#cbd5e1' }}>›</span>
+              <ChevronRight size={14} color="#cbd5e1" strokeWidth={2} />
               <span style={{ color: i === breadcrumb.length - 1 ? '#0f172a' : '#94a3b8' }}>{b}</span>
             </span>
           ))}
@@ -471,8 +528,10 @@ export function MapaElectoralLab() {
           color: '#fff', padding: '6px 14px', borderRadius: 8,
           fontSize: 10.5, letterSpacing: 1.5, fontWeight: 800, fontFamily: 'JetBrains Mono, monospace',
           transition: 'background .3s',
+          display: 'inline-flex', alignItems: 'center', gap: 7,
         }}>
-          {level === 'departamentos' ? '🗺 DEPARTAMENTOS' : level === 'provincias' ? '📍 PROVINCIAS' : '🏘 DISTRITOS'}
+          {level === 'departamentos' ? <MapIcon size={13} strokeWidth={2.4} /> : level === 'provincias' ? <MapPin size={13} strokeWidth={2.4} /> : <Building2 size={13} strokeWidth={2.4} />}
+          <span>{level === 'departamentos' ? 'DEPARTAMENTOS' : level === 'provincias' ? 'PROVINCIAS' : 'DISTRITOS'}</span>
         </div>
 
         {level !== 'departamentos' && (
@@ -484,7 +543,10 @@ export function MapaElectoralLab() {
             transition: 'transform .15s',
           }} onMouseEnter={e => (e.currentTarget.style.transform = 'translateY(-2px)')}
              onMouseLeave={e => (e.currentTarget.style.transform = 'none')}>
-            ← Volver
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+              <ArrowLeft size={16} strokeWidth={2.4} />
+              Volver
+            </span>
           </button>
         )}
       </div>
@@ -580,11 +642,13 @@ export function MapaElectoralLab() {
             <div style={{ fontSize: 10, letterSpacing: 1.4, fontWeight: 700, color: '#64748b', fontFamily: 'JetBrains Mono, monospace', marginBottom: 10 }}>
               RESULTADO NACIONAL
             </div>
-            {CAND_KEYS.map(k => {
-              const pct = presData?.projection?.[k] ?? 0;
-              const maxPct = Math.max(...CAND_KEYS.map(kk => presData?.projection?.[kk] ?? 0), 1);
-              return (
-                <div key={k} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderTop: '1px solid rgba(15,23,42,.04)' }}>
+            {(() => {
+              const ranked = CAND_KEYS
+                .map(k => ({ k, pct: presData?.projection?.[k] ?? 0 }))
+                .sort((a, b) => b.pct - a.pct);
+              const maxPct = ranked[0]?.pct || 1;
+              return ranked.map(({ k, pct }, i) => (
+                <div key={k} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderTop: i ? '1px solid rgba(15,23,42,.04)' : 'none' }}>
                   <CandidatePhoto dni={CAND_DNI[k]} nombre={CAND_NAMES[k]} color={CAND_COLORS[k]} size={38} ring={false} />
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a' }}>{CAND_NAMES[k]}</div>
@@ -597,8 +661,8 @@ export function MapaElectoralLab() {
                     {pct.toFixed(2)}%
                   </div>
                 </div>
-              );
-            })}
+              ));
+            })()}
           </>
         ) : (
           <div style={{ padding: 30, textAlign: 'center', color: '#94a3b8', fontSize: 13 }}>
