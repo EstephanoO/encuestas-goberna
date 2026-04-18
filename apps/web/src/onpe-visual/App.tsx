@@ -17,6 +17,7 @@ import { ActasPage } from './components/ActasPage';
 import { MapaElectoralLab } from './components/MapaElectoralLab';
 import { InsightsRow } from './components/InsightsRow';
 import { ParticipacionCard } from './components/ParticipacionCard';
+import { MonitorPresidencial } from './components/MonitorPresidencial';
 import { MOCK_ONPE, MOCK_DATUM } from './data/mock';
 import { loadData } from './data/source';
 import { useTheme } from './components/ThemeToggle';
@@ -141,6 +142,8 @@ function App() {
         thirdVotes={data.votes?.[third]}
         votosRestantes={data.votosFaltantes}
       />
+
+      <MonitorPresidencial />
 
       <Tabs active={tab} onChange={setTab} />
 
